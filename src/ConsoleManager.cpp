@@ -6,6 +6,7 @@
 #include <locale>
 
 
+
 // --- Implementarea metodei initialize ---
 void ConsoleManager::initialize() {
     // Alocă o nouă consolă pentru procesul curent.
