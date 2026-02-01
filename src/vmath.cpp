@@ -182,3 +182,20 @@ double evaluate_formula_fp(string& expr) {
     double result = evaluatePostfix(postfix);
     return result;
 }
+
+double factorial(double input) {
+    // factorial nedefinit pentru numere negative
+    if (input < 0.0)
+        return NAN;
+
+    // verificăm că input-ul este întreg (fără cast)
+    if (fabs(input - floor(input)) > 1e-9)
+        return NAN;
+
+    // cazul de bază
+    if (input == 0.0 || input == 1.0)
+        return 1.0;
+
+    // recursivitate
+    return input * factorial(input - 1.0);
+}

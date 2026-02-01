@@ -33,6 +33,10 @@ private:
     using ShellHandler = std::function<void(const ShellCommand&)>;
     std::map<std::wstring, ShellHandler> m_commandHandlers;
     
+
+    using ShellFunction = std::function<std::wstring(const std::vector<std::wstring>&)>;
+    std::map<std::wstring, ShellFunction> m_functionHandlers;
+
 public:
     
 
@@ -46,7 +50,7 @@ public:
 
     void initializeHandlers();
 
-    
+    std::wstring processArgument(std::wstring arg);
 
  
     
@@ -94,6 +98,7 @@ public:
    void handleSysCommand(const ShellCommand& sc);
 
    void handleEvalCommand(const ShellCommand& sc);
+   std::wstring resolveExpression(std::wstring input);
 
    
 };

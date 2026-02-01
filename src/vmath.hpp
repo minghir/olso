@@ -18,5 +18,6 @@ void replaceSubstring(std::string& str, const std::string& from, const std::stri
 std::vector<std::string> infixToPostfix(const std::string& expr);
 double evaluatePostfix(const std::vector<std::string>& postfix);
 double evaluate_formula_fp(std::string& expr);
+double factorial(double input);
 
 #endif

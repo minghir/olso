@@ -144,16 +144,21 @@ vShell::vShell() : m_running(true) {
 }
 
 void vShell::executeShellCommand(const std::wstring& line) {
-        ShellCommand sc = vShellCommandParser::parse(line);
-        if (!sc.isValid) return;
+    ShellCommand sc = vShellCommandParser::parse(line);
+    if (!sc.isValid) return;
 
-        auto it = m_commandHandlers.find(sc.name);
-        if (it != m_commandHandlers.end()) {
-            it->second(sc);
-        }
-        else {
-            LOG_ERROR(L"Unknown command: " + sc.name);
-        }
+    // REZOLVARE DINAMICĂ: Transformăm FACT(3) în 6 înainte de a ajunge la Handler
+    for (auto& arg : sc.args) {
+        arg = processArgument(arg);
+    }
+
+    auto it = m_commandHandlers.find(sc.name);
+    if (it != m_commandHandlers.end()) {
+        it->second(sc); // Acum /echo va primi direct "6" în args[0]
+    }
+    else {
+        LOG_ERROR(L"Unknown command: " + sc.name);
+    }
     }
 
 void vShell::initializeHandlers() {
@@ -258,7 +263,80 @@ void vShell::initializeHandlers() {
         m_commandHandlers[L"/tables"] = m_commandHandlers[L"/t"];
 
         // Adaugă restul în același stil...
+
+
+        m_functionHandlers[L"FACT"] = [this](auto args) -> std::wstring { // Specificăm tipul aici
+            if (args.empty()) return L"0";
+
+            try {
+                double val = std::stod(args[0]);
+                // Am scos (double) cast-ul de la factorial, rezultatul e deja double
+                return std::to_wstring(factorial(val));
+            }
+            catch (...) {
+                return L"NaN";
+            }
+            };
+
+        m_functionHandlers[L"CONCAT"] = [](const std::vector<std::wstring>& args) -> std::wstring {
+            std::wstring res;
+            for (auto s : args) {
+                if (s.size() >= 2 && s.front() == L'\"' && s.back() == L'\"')
+                    s = s.substr(1, s.size() - 2);
+                res += s;
+            }
+            return res;
+            };
+
+        m_functionHandlers[L"UPPER"] = [](auto args) -> std::wstring {
+            if (args.empty()) return L"";
+            std::wstring s = args[0];
+            std::transform(s.begin(), s.end(), s.begin(), ::towupper);
+            return s;
+            };
+
     }
+
+    std::wstring vShell::processArgument(std::wstring arg) {
+        // 1. Înlocuim variabilele mai întâi
+        arg = substituteVariables(arg, m_variables);
+
+        // 2. Căutăm funcția
+        size_t openParen = arg.find(L'(');
+        // Căutăm ultima paranteză pentru a închide corect funcția
+        size_t closeParen = arg.find_last_of(L')');
+
+        if (openParen != std::wstring::npos && closeParen != std::wstring::npos && openParen < closeParen) {
+            std::wstring funcName = arg.substr(0, openParen);
+            // Eliminăm eventuale spații de dinainte de paranteză, ex: FACT (3)
+            funcName.erase(funcName.find_last_not_of(L" ") + 1);
+
+            if (m_functionHandlers.count(funcName)) {
+                std::wstring innerContent = arg.substr(openParen + 1, closeParen - openParen - 1);
+                std::vector<std::wstring> parsedArgs;
+
+                // Logică de split simplă după virgulă pentru parametri
+                std::wstringstream ss(innerContent);
+                std::wstring item;
+                while (std::getline(ss, item, L',')) {
+                    // Trim spații pentru fiecare argument
+                    size_t first = item.find_first_not_of(L" ");
+                    if (first != std::wstring::npos) {
+                        size_t last = item.find_last_not_of(L" ");
+                        item = item.substr(first, (last - first + 1));
+                    }
+
+                    // RECURSIVITATE: Permite funcții în interiorul funcțiilor
+                    parsedArgs.push_back(processArgument(item));
+                }
+
+                return m_functionHandlers[funcName](parsedArgs);
+            }
+        }
+
+        return arg;
+    }
+
 
     void vShell::handleCsvCommand(const ShellCommand& sc) {
         /*
@@ -789,7 +867,7 @@ std::wstring vShell::substituteVariables(std::wstring query, const std::map<std:
              else LOG_ERROR(L"Usage: /load <path>");
              */
     }
-
+    /*
     void vShell::handleSetCommand(const ShellCommand& sc) {
         // CAZ 1: /set (fără argumente) -> Afișăm tot
         if (sc.args.empty()) {
@@ -821,7 +899,7 @@ std::wstring vShell::substituteVariables(std::wstring query, const std::map<std:
 
         // Determinăm tipul de atribuire
         if (varValue.size() >= 2 && varValue.front() == L'`' && varValue.back() == L'`') {
-            assignFromQuery(varName, varValue.substr(1, varValue.size() - 2));
+           // assignFromQuery(varName, varValue.substr(1, varValue.size() - 2));
         }
         else if (varValue.size() >= 2 && varValue.front() == L'[' && varValue.back() == L']') {
             assignFromLastResult(varName, varValue.substr(1, varValue.size() - 2));
@@ -829,6 +907,46 @@ std::wstring vShell::substituteVariables(std::wstring query, const std::map<std:
         else {
             m_variables[varName] = varValue;
             LOG_SUCCESS(L"Variable " + varName + L" set to: " + varValue);
+        }
+    }
+    */
+
+    void vShell::handleSetCommand(const ShellCommand& sc) {
+        if (sc.args.empty()) {
+            displayVariables();
+            return;
+        }
+
+        // Reconstruim linia completă
+        std::wstring fullLine;
+        for (size_t i = 0; i < sc.args.size(); ++i) {
+            fullLine += sc.args[i] + (i < sc.args.size() - 1 ? L" " : L"");
+        }
+
+        size_t eqPos = fullLine.find(L'=');
+        if (eqPos == std::wstring::npos) {
+            displaySingleVariable(fullLine);
+            return;
+        }
+
+        std::wstring varName = normalizeVarName(fullLine.substr(0, eqPos));
+        std::wstring varValue = fullLine.substr(eqPos + 1);
+
+        // Trim spații
+        varValue.erase(0, varValue.find_first_not_of(L" "));
+
+        // Verificăm dacă valoarea este o sub-comandă între backticks
+        if (!varValue.empty() && varValue.front() == L'`' && varValue.back() == L'`') {
+            m_variables[varName] = resolveExpression(varValue);
+            LOG_SUCCESS(L"Variable " + varName + L" set dynamically to: " + m_variables[varName]);
+        }
+        else if (!varValue.empty() && varValue.front() == L'[' && varValue.back() == L']') {
+            assignFromLastResult(varName, varValue.substr(1, varValue.size() - 2));
+        }
+        else {
+            // Atribuire simplă cu interpolare de variabile existente
+            m_variables[varName] = substituteVariables(varValue, m_variables);
+            LOG_SUCCESS(L"Variable " + varName + L" set to: " + m_variables[varName]);
         }
     }
 
@@ -1271,4 +1389,28 @@ std::wstring vShell::substituteVariables(std::wstring query, const std::map<std:
             LOG_ERROR(L"Math Error: Expresie invalidă.");
         }
 
+    }
+
+    std::wstring vShell::resolveExpression(std::wstring input) {
+        if (input.size() < 2 || input.front() != L'`' || input.back() != L'`') {
+            return substituteVariables(input, m_variables);
+        }
+
+        // Extragem comanda din interiorul backticks (ex: "/eval 2+2")
+        std::wstring innerCmd = input.substr(1, input.size() - 2);
+
+        // Pentru a captura output-ul comenzilor care în mod normal scriu la consolă (std::wcout),
+        // putem folosi un buffer temporar sau stream redirection dacă vrei rezultate complexe.
+        // Pentru /eval, e simplu deoarece avem acces la variabila $LAST_EVAL.
+
+        if (innerCmd.find(L"/eval ") == 0) {
+            executeShellCommand(innerCmd); // Aceasta va actualiza $LAST_EVAL
+            return m_variables[L"$LAST_EVAL"];
+        }
+
+        if (innerCmd.find(L"/echo ") == 0) {
+            return substituteVariables(innerCmd.substr(6), m_variables);
+        }
+
+        return input; // Returnăm neschimbat dacă nu știm să-l executăm
     }
