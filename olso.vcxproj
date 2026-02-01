@@ -22,6 +22,7 @@
     <ClCompile Include="src\ConsoleManager.cpp" />
     <ClCompile Include="src\vApp.cpp" />
     <ClCompile Include="src\vEngine.cpp" />
+    <ClCompile Include="src\vmath.cpp" />
     <ClCompile Include="src\vShell.cpp">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</CompileAs>
     </ClCompile>
@@ -30,6 +31,7 @@
     <ClInclude Include="src\ConsoleManager.hpp" />
     <ClInclude Include="src\vApp.hpp" />
     <ClInclude Include="src\vKeyWords.hpp" />
+    <ClInclude Include="src\vmath.hpp" />
     <ClInclude Include="src\vShell.hpp" />
     <ClInclude Include="src\vShellCommandParser.hpp" />
   </ItemGroup>

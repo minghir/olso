@@ -19,6 +19,9 @@
     <ClCompile Include="src\vShell.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\vmath.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\ConsoleManager.hpp">
@@ -34,6 +37,9 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="src\vKeyWords.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vmath.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

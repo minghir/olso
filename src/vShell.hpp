@@ -92,6 +92,9 @@ public:
    void handleDescribeCommand(const ShellCommand& sc);
    void handleIfCommand(const ShellCommand& sc);
    void handleSysCommand(const ShellCommand& sc);
+
+   void handleEvalCommand(const ShellCommand& sc);
+
    
 };
 #endif

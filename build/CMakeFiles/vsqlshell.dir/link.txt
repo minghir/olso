@@ -1,0 +1,1 @@
+/ucrt64/bin/c++.exe -Wl,--enable-auto-import CMakeFiles/vsqlshell.dir/src/ConsoleManager.cpp.o CMakeFiles/vsqlshell.dir/src/vApp.cpp.o CMakeFiles/vsqlshell.dir/src/vEngine.cpp.o CMakeFiles/vsqlshell.dir/src/vShell.cpp.o -o vsqlshell.exe -Wl,--out-implib,libvsqlshell.dll.a -Wl,--major-image-version,0,--minor-image-version,0

@@ -1,6 +1,16 @@
 ﻿#include <variant>
+
+#include <filesystem>
+#include <fstream>
+
+
 #include "vShell.hpp"
+#include "vmath.hpp"
 #include "ConsoleManager.hpp"
+
+
+
+
 
 
 std::wstring vShell::vValueToString(const vValue& val) {
@@ -227,7 +237,11 @@ void vShell::initializeHandlers() {
         m_commandHandlers[L"/if"] = [this](const auto& sc) {
             handleIfCommand(sc);
             };
-        
+
+        m_commandHandlers[L"/eval"] = [this](const auto& sc) {
+            handleEvalCommand(sc);
+            };
+
 
         m_commandHandlers[L"/imp"] = [this](const auto& sc) { handleImportCommand(sc); };
         m_commandHandlers[L"/import"] = [this](const auto& sc) { handleImportCommand(sc); };
@@ -638,7 +652,11 @@ std::wstring vShell::substituteVariables(std::wstring query, const std::map<std:
 
 
     void vShell::executeScript(const std::wstring& filePath) {
-        std::wifstream file(filePath);
+
+        std::wifstream file;
+        file.open(std::filesystem::path(filePath));
+
+
         if (!file.is_open()) {
             LOG_ERROR(L"Could not open script file: " + filePath);
             return;
@@ -1218,4 +1236,39 @@ std::wstring vShell::substituteVariables(std::wstring query, const std::map<std:
 
         if (returnCode == 0) LOG_SUCCESS(L"Command finished.");
         else LOG_ERROR(L"Command failed with code: " + std::to_wstring(returnCode));
+
+    }
+
+
+    void vShell::handleEvalCommand(const ShellCommand& sc) {
+        if (sc.args.empty()) {
+            LOG_ERROR(L"Usage: /eval <expression> (ex: /eval 2 * (3 + 4))");
+            return;
+        }
+
+        // 1. Reconstruim expresia din argumente
+        std::wstring wideExpr;
+        for (const auto& arg : sc.args) wideExpr += arg;
+
+        // 2. Înlocuim variabilele shell-ului (ex: ${ID} -> 1)
+        wideExpr = substituteVariables(wideExpr, m_variables);
+
+        // 3. Convertim din wstring (Unicode) în string (pentru funcțiile tale de calcul)
+        std::string expr(wideExpr.begin(), wideExpr.end());
+
+        try {
+            // 4. Folosim motorul tău de calcul
+            double result = evaluate_formula_fp(expr);
+
+            // 5. Afișăm rezultatul
+            // Dacă există o redirecționare setată, std::wcout va scrie în fișier automat!
+            std::wcout << result << std::endl;
+
+            // Opțional: salvăm rezultatul într-o variabilă specială pentru a fi folosit ulterior
+            m_variables[L"$LAST_EVAL"] = std::to_wstring(result);
+        }
+        catch (const std::exception& e) {
+            LOG_ERROR(L"Math Error: Expresie invalidă.");
+        }
+
     }

@@ -1,0 +1,3 @@
+/home/mingh/proiecte/olso/build/CMakeFiles/vsqlshell.dir
+/home/mingh/proiecte/olso/build/CMakeFiles/edit_cache.dir
+/home/mingh/proiecte/olso/build/CMakeFiles/rebuild_cache.dir

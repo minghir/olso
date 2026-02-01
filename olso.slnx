@@ -3,5 +3,9 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+<<<<<<< HEAD
+  <Project Path="olso.vcxproj" Id="e9c14e2a-7c97-42a4-86c3-c05917bf2522" />
+=======
   <Project Path="olso.vcxproj" />
+>>>>>>> fb12a2f71bc1f0846fb007861ec59ede9e61a78c
 </Solution>
