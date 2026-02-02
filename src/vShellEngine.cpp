@@ -567,13 +567,25 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
             // Dacă input-ul este pur o variabilă sau variabilă cu index ($a sau $a[0])
             // și nu are alte caractere (ca + sau spații)
             if (input.find_first_of(L" +-*/") == std::wstring::npos) {
-                LOG_DEBUG(L"Încerc Deep Copy pentru: " + input);
+                // --- LOGICĂ REPARATĂ ---
+        // 1. Încercăm rezolvarea (inclusiv indexare gen $a[0])
                 vDataValue val = resolveVariableToValue(input, m_variables);
+
                 if (!std::holds_alternative<std::monostate>(val)) {
-                    LOG_WARNING(L"resolveVariableToValue a returnat monostate!");
                     vData res;
-                    res.value = val; // COPIE PERFECTĂ (păstrează Array, Int, Double)
+                    res.value = val; // Aici se copiază vectorul direct (Deep Copy)
                     return res;
+                }
+                else {
+                    // Dacă resolveVariableToValue a eșuat, verificăm dacă nu cumva e o 
+                    // variabilă simplă care în map e stocată FĂRĂ '$'
+                    std::wstring cleanName = input.substr(1); // scoatem $
+                    auto it = m_variables.find(cleanName);
+                    if (it != m_variables.end()) {
+                        vData res;
+                        res.value = it->second.value;
+                        return res;
+                    }
                 }
             }
         }
@@ -800,32 +812,43 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
 
 
     vDataValue vShellEngine::resolveVariableToValue(std::wstring input, const std::map<std::wstring, vData>& vars) {
-        if (input.empty() || input[0] != L'$') return std::monostate{};
+        if (input.empty()) return std::monostate{};
 
+        // Extragem numele de bază (ex din $a[0] extragem $a)
         size_t i = 0;
-        std::wstring varName = L"$";
-        i++; // sărim de $
-        while (i < input.length() && (std::iswalnum(input[i]) || input[i] == L'_')) {
+        std::wstring varName;
+
+        // Luăm tot până la prima paranteză sau spațiu
+        while (i < input.length() && input[i] != L'[') {
             varName += input[i++];
         }
 
+        // Încercăm să găsim variabila în map
         auto it = vars.find(varName);
-        if (it == vars.end()) return std::monostate{};
+        if (it == vars.end()) {
+            // Dacă nu există cu $, încercăm fără $
+            if (varName[0] == L'$') {
+                it = vars.find(varName.substr(1));
+            }
+        }
+
+        if (it == vars.end()) return std::monostate{}; // Nu am găsit-o deloc
 
         vDataValue currentVal = it->second.value;
 
-        // Logica de indexare (mutată aici din substituteVariables)
+        // Procesăm indicii dacă există ($a[0][1])
         while (i < input.length() && input[i] == L'[') {
-            size_t closeBracket = input.find(L']', i);
-            if (closeBracket == std::wstring::npos) break;
+            size_t end = input.find(L']', i);
+            if (end == std::wstring::npos) break;
 
-            std::wstring indexStr = input.substr(i + 1, closeBracket - i - 1);
-            // Pentru index folosim în continuare versiunea text (căci indicii sunt mereu numere)
-            std::wstring resolvedIdx = substituteVariables(indexStr, vars);
+            std::wstring idxStr = input.substr(i + 1, end - i - 1);
+            // Rezolvăm indexul (poate fi o altă variabilă gen $a[$i])
+            std::wstring resolvedIdx = substituteVariables(idxStr, vars);
+
             try {
                 int idx = std::stoi(resolvedIdx);
                 if (std::holds_alternative<vDataArray>(currentVal)) {
-                    const auto& arr = std::get<vDataArray>(currentVal);
+                    vDataArray& arr = std::get<vDataArray>(currentVal);
                     if (idx >= 0 && (size_t)idx < arr.size()) {
                         currentVal = arr[idx].value;
                     }
@@ -835,7 +858,8 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
             }
             catch (...) { return std::monostate{}; }
 
-            i = closeBracket + 1;
+            i = end + 1;
         }
+
         return currentVal;
     }
