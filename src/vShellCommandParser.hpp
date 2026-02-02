@@ -19,8 +19,6 @@ public:
     static ShellCommand parse(const std::wstring& line) {
         ShellCommand cmd;
 
-        
-
         if (line.empty() || line[0] != L'/') return cmd;
 
         if (cmd.isValid) {
@@ -33,7 +31,7 @@ public:
 
         std::wstring currentToken;
         bool inQuotes = false;
-
+        /*
         for (size_t i = 0; i < line.length(); ++i) {
             wchar_t c = line[i];
 
@@ -53,7 +51,27 @@ public:
                 currentToken += c;
             }
         }
+        */
+        for (size_t i = 0; i < line.length(); ++i) {
+            wchar_t c = line[i];
 
+            if (c == L'\"') {
+                inQuotes = !inQuotes;
+                currentToken += c; // ADĂUGĂM ghilimeaua, nu o sărim!
+                continue;
+            }
+
+            if (iswspace(c) && !inQuotes) { // iswspace e mai sigur decât L' '
+                if (!currentToken.empty()) {
+                    if (cmd.name.empty()) cmd.name = currentToken;
+                    else cmd.args.push_back(currentToken);
+                    currentToken.clear();
+                }
+            }
+            else {
+                currentToken += c;
+            }
+        }
         // Adăugăm ultimul token dacă există
         if (!currentToken.empty()) {
             if (cmd.name.empty()) cmd.name = currentToken;

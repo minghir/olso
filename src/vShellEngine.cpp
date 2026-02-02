@@ -9,21 +9,51 @@
 #include "stringUtils.hpp"
 
 void vShellEngine::execute(const std::wstring& line) {
-    // Curățăm linia respectând regulile tale
     std::wstring cleanLine = normalizeSpaces(line);
+    if (cleanLine.empty() && m_accumulator.empty()) return;
 
-    if (cleanLine.empty()) return;
-
-    // Acum lucrăm doar cu cleanLine
-    if (cleanLine[0] == L'/') {
-        executeShellCommand(cleanLine);
+    // 1. Verificăm dacă linia curentă cere continuare
+    bool continues = false;
+    if (!cleanLine.empty() && cleanLine.back() == L'\\') {
+        continues = true;
+        cleanLine.pop_back(); // Eliminăm '\'
     }
+
+    // 2. Adăugăm bucata curentă la acumulator
+    // Punem un spațiu doar dacă nu e prima bucată
+    if (!m_accumulator.empty() && !cleanLine.empty()) m_accumulator += L" ";
+    m_accumulator += cleanLine;
+
+    // 3. Dacă linia se termină în '\', ieșim și așteptăm următoarea intrare
+    if (continues) {
+        // Opțional: poți schimba prompt-ul consolei aici în ">> " pentru feedback vizual
+        return;
+    }
+
+    // 4. Acum avem linia completă în m_accumulator. Decidem ce este:
+    std::wstring fullCommand = normalizeSpaces(m_accumulator);
+    m_accumulator.clear(); // Resetăm pentru următoarea utilizare
+
+    if (fullCommand.empty()) return;
+
+    // CAZ A: Comandă Shell
+    if (fullCommand[0] == L'/') {
+        // Eliminăm ';' de la final dacă există (opțional, pentru consistență)
+        if (!fullCommand.empty() && fullCommand.back() == L';') {
+            fullCommand.pop_back();
+        }
+        executeShellCommand(fullCommand);
+    }
+    // CAZ B: SQL Query
     else {
-        // Pentru SQL, adunăm linia curățată
-        m_accumulator += cleanLine + L" ";
-        if (cleanLine.find(L';') != std::wstring::npos) {
-            //processQuery(m_accumulator);
-            m_accumulator.clear();
+        // Pentru SQL, verificăm dacă avem ';' obligatoriu
+        if (fullCommand.find(L';') != std::wstring::npos) {
+            //processQuery(fullCommand);
+        }
+        else {
+            // Dacă nu are ';' și nu are '\', o păstrăm în acumulator 
+            // sau dăm eroare, depinde de preferința ta.
+            m_accumulator = fullCommand;
         }
     }
 }
@@ -368,13 +398,20 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
 
     std::wstring vShellEngine::vDataToPrintable(const vDataValue& data) {
         if (std::holds_alternative<std::wstring>(data)) {
+            // Dacă e wstring, îl afișăm cu ghilimele ca să știm că e text
             return L"\"" + std::get<std::wstring>(data) + L"\"";
         }
         if (std::holds_alternative<long long>(data)) {
             return std::to_wstring(std::get<long long>(data));
         }
         if (std::holds_alternative<double>(data)) {
-            return std::to_wstring(std::get<double>(data));
+            std::wstring s = std::to_wstring(std::get<double>(data));
+            // Curățăm zerourile inutile: 2.500000 -> 2.5
+            if (s.find(L'.') != std::wstring::npos) {
+                s.erase(s.find_last_not_of(L'0') + 1, std::wstring::npos);
+                if (s.back() == L'.') s.pop_back(); // Eliminăm punctul dacă nu mai avem zecimale
+            }
+            return s;
         }
         if (std::holds_alternative<bool>(data)) {
             return std::get<bool>(data) ? L"true" : L"false";
@@ -383,7 +420,7 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
             const auto& arr = std::get<vDataArray>(data);
             std::wstring res = L"[";
             for (size_t i = 0; i < arr.size(); ++i) {
-                res += vDataToPrintable(arr[i].value); // Recursivitate pentru array-uri de array-uri
+                res += vDataToPrintable(arr[i].value);
                 if (i < arr.size() - 1) res += L", ";
             }
             res += L"]";
@@ -457,49 +494,15 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
 
         // 3. Cazul STRING simplu sau VARIABLE SUBSTITUTION
         // Dacă nu e array sau sub-comanda, este un string care poate conține variabile
+        std::wstring substituted = substituteVariables(input, m_variables);
         vData res;
-        res.value = substituteVariables(input, m_variables);
+        res.value = parseLiteralToValue(substituted);
         return res;
     }
 
    
 
-    vData vShellEngine::parseLiteral(const std::wstring& input, size_t& pos) {
-        vData result;
-        while (pos < input.size() && iswspace(input[pos])) pos++;
-
-        if (pos >= input.size()) return result;
-
-        if (input[pos] == L'[') { // Începe un Array
-            vDataArray arr;
-            pos++; // trecem de [
-            while (pos < input.size() && input[pos] != L']') {
-                arr.push_back(parseLiteral(input, pos)); // Recursivitate
-                while (pos < input.size() && (iswspace(input[pos]) || input[pos] == L',')) pos++;
-            }
-            if (pos < input.size()) pos++; // trecem de ]
-            result.value = arr;
-        }
-        else if (input[pos] == L'\"') { // Începe un String
-            std::wstring s;
-            pos++;
-            while (pos < input.size() && input[pos] != L'\"') {
-                if (input[pos] == L'\\' && pos + 1 < input.size()) pos++; // Escape char
-                s += input[pos++];
-            }
-            if (pos < input.size()) pos++; // trecem de "
-            result.value = s;
-        }
-        else { // Începe un număr sau o variabilă simplă
-            std::wstring raw;
-            while (pos < input.size() && !iswspace(input[pos]) && input[pos] != L',' && input[pos] != L']') {
-                raw += input[pos++];
-            }
-            // Aici poți adăuga logică să convertești în double/int dacă e cazul
-            result.value = raw;
-        }
-        return result;
-    }
+    
 
     
     vDataValue vShellEngine::getVarValue(std::wstring expression) {
@@ -555,7 +558,7 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
 
         return currentVal;
     }
-
+    /*
     vDataValue vShellEngine::parseLiteralToValue(std::wstring str) {
         str = normalizeSpaces(str);
         if (str.empty()) return std::monostate{};
@@ -600,4 +603,103 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
             // Dacă totul eșuează, îl tratăm ca pe un string brut (fără ghilimele)
             return str;
         }
+    }
+*/
+
+    vDataValue vShellEngine::parseLiteralToValue(std::wstring str) {
+        str = normalizeSpaces(str);
+        if (str.empty()) return std::monostate{};
+
+        // 1. String literar marcat cu ghilimele: "123" -> rămâne string
+        if (str.size() >= 2 && str.front() == L'\"' && str.back() == L'\"') {
+            return str.substr(1, str.size() - 2);
+        }
+
+        // 2. Variabilă: $X -> extragem valoarea din memorie
+        if (str.front() == L'$') {
+            return getVarValue(str);
+        }
+
+        // 3. Valori Booleane
+        if (str == L"true") return true;
+        if (str == L"false") return false;
+
+        // 4. Încercăm conversia numerică (Inima rezolvării tale)
+        try {
+            size_t processed = 0;
+            // Cazul Double
+            if (str.find(L'.') != std::wstring::npos) {
+                double d = std::stod(str, &processed);
+                if (processed == str.size()) return d;
+            }
+            // Cazul Integer
+            else {
+                long long ll = std::stoll(str, &processed);
+                if (processed == str.size()) return ll;
+            }
+        }
+        catch (...) {
+            // Nu este număr valid, mergem mai departe
+        }
+
+        // 5. Fallback: Dacă nu e nimic de mai sus, e un string brut (ex: numele unei tabele)
+        return str;
+    }
+
+    vData vShellEngine::parseLiteral(const std::wstring& input, size_t& pos) {
+        vData result;
+        // Sărim peste spațiile albe de la început
+        while (pos < input.size() && iswspace(input[pos])) pos++;
+
+        if (pos >= input.size()) return result;
+
+        if (input[pos] == L'[') {
+            // --- CAZUL 1: ARRAY ---
+            vDataArray arr;
+            pos++; // trecem de [
+            while (pos < input.size() && input[pos] != L']') {
+                // Recursivitate: elementul poate fi orice (alt array, string, numar)
+                arr.push_back(parseLiteral(input, pos));
+
+                // Sărim peste virgule și spații între elemente
+                while (pos < input.size() && (iswspace(input[pos]) || input[pos] == L',')) pos++;
+            }
+            if (pos < input.size()) pos++; // trecem de ]
+            result.value = arr;
+        }
+        else if (input[pos] == L'\"') {
+            // --- CAZUL 2: STRING EXPLICIT (cu ghilimele) ---
+            std::wstring s;
+            // Păstrăm ghilimeaua de deschidere pentru ca parseLiteralToValue să știe că e string
+            s += input[pos++];
+
+            while (pos < input.size() && input[pos] != L'\"') {
+                if (input[pos] == L'\\' && pos + 1 < input.size()) {
+                    // Suport pentru escape character (ex: \")
+                    s += input[pos++];
+                }
+                s += input[pos++];
+            }
+
+            // Păstrăm și ghilimeaua de închidere
+            if (pos < input.size()) s += input[pos++];
+
+            // Trimitem string-ul "3" cu tot cu ghilimele. 
+            // parseLiteralToValue va scoate ghilimelele și va returna wstring pur.
+            result.value = parseLiteralToValue(s);
+        }
+        else {
+            // --- CAZUL 3: NUMĂR, BOOLEAN SAU VARIABILĂ ---
+            std::wstring raw;
+            // Colectăm până la separator (spațiu, virgulă sau închidere array)
+            while (pos < input.size() && !iswspace(input[pos]) &&
+                input[pos] != L',' && input[pos] != L']') {
+                raw += input[pos++];
+            }
+
+            // Trimitem textul brut (ex: 2.5 sau true) pentru conversie
+            result.value = parseLiteralToValue(raw);
+        }
+
+        return result;
     }

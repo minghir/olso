@@ -649,6 +649,8 @@ void vShellEngine::handleSetCommand(const ShellCommand& sc) {
     std::wstring rawName = normalizeSpaces(fullLine.substr(0, eqPos));
     std::wstring rawValue = normalizeSpaces(fullLine.substr(eqPos + 1));
 
+    std::wcout << L"[DEBUG] rawValue trimis la resolve: |" << rawValue << L"|" << std::endl;
+
     // Folosim resolveExpression - e inima sistemului tău
     vData finalValue = resolveExpression(rawValue);
 

@@ -117,10 +117,10 @@ private:
 
     //command handlers
     void handleSetCommand(const ShellCommand& sc);
-    void handleEchoCommand(const ShellCommand& sc);
-    void handleImportCommand(const ShellCommand& sc);
     void handleUnsetCommand(const ShellCommand& sc);
     void handleUnsetAllCommand(const ShellCommand& sc);
+    void handleEchoCommand(const ShellCommand& sc);
+    void handleImportCommand(const ShellCommand& sc);
     void handleClearCommand(const ShellCommand& sc);
     void handleHistoryCommand(const ShellCommand& sc);
     void handleRunCommand(const ShellCommand& sc);
