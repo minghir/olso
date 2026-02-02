@@ -1,4 +1,5 @@
 ﻿#include "vShell.hpp"
+#include "vShellEngine.hpp"
 #include "vApp.hpp"
 
 #include<iostream>
@@ -15,7 +16,8 @@ public:
         
 
         
-        vShell shell;
+        vShellEngine shEngine;
+        vShell shell(shEngine);
         shell.run(); // Această metodă blochează până la 'exit'
         return true;
     }

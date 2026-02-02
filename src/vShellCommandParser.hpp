@@ -1,5 +1,5 @@
-﻿#ifndef VSHELLCOMMANDPARSER_HPP
-#define VSHELLCOMMANDPARSER_HPP
+﻿#ifndef vShellEngineCOMMANDPARSER_HPP
+#define vShellEngineCOMMANDPARSER_HPP
 
 #include <string>
 #include <vector>
@@ -14,7 +14,7 @@ struct ShellCommand {
     bool isValid = false;
 };
 
-class vShellCommandParser {
+class vShellEngineCommandParser {
 public:
     static ShellCommand parse(const std::wstring& line) {
         ShellCommand cmd;

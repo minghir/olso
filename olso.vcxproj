@@ -20,19 +20,24 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\ConsoleManager.cpp" />
+    <ClCompile Include="src\stringUtils.cpp" />
     <ClCompile Include="src\vApp.cpp" />
     <ClCompile Include="src\vEngine.cpp" />
     <ClCompile Include="src\vmath.cpp" />
-    <ClCompile Include="src\vShell.cpp">
+    <ClCompile Include="src\vShell.cpp" />
+    <ClCompile Include="src\vShellEngine.cpp">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</CompileAs>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\ConsoleManager.hpp" />
+    <ClInclude Include="src\IShellEngine.hpp" />
+    <ClInclude Include="src\stringUtils.hpp" />
     <ClInclude Include="src\vApp.hpp" />
     <ClInclude Include="src\vKeyWords.hpp" />
     <ClInclude Include="src\vmath.hpp" />
     <ClInclude Include="src\vShell.hpp" />
+    <ClInclude Include="src\vShellEngine.hpp" />
     <ClInclude Include="src\vShellCommandParser.hpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -46,26 +51,26 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v14</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v145</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>

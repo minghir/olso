@@ -16,10 +16,16 @@
     <ClCompile Include="src\vEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\vShell.cpp">
+    <ClCompile Include="src\vShellEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\vmath.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vShell.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stringUtils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -30,7 +36,7 @@
     <ClInclude Include="src\vApp.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\vShell.hpp">
+    <ClInclude Include="src\vShellEngine.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="src\vShellCommandParser.hpp">
@@ -40,6 +46,15 @@
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="src\vmath.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vShell.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\IShellEngine.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\stringUtils.hpp">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
