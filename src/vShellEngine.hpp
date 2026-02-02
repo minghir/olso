@@ -20,7 +20,36 @@
 #include "IShellEngine.hpp"
 #include "vShellCommandParser.hpp"
 
+
+#include <vector>
+#include <memory>
+
+struct vData; // Forward declaration
+
+using vDataArray = std::vector<vData>;
+//using vDataValue = std::variant<std::monostate, std::wstring, vDataArray>;
+
+using vDataValue = std::variant<
+    std::monostate,
+    std::wstring,
+    long long,
+    double,
+    bool,
+    vDataArray
+>;
+
+
+struct vData {
+    vDataValue value;
+
+    // Utilitar pentru a verifica dacă este array sau string
+    bool isArray() const { return std::holds_alternative<vDataArray>(value); }
+};
+
 using vValue = std::variant<std::monostate, std::wstring, int, double, long long, bool>;
+
+
+
 
 class vShellEngine : public IShellEngine {
 
@@ -29,8 +58,8 @@ private:
     bool m_running;
     std::wstring m_accumulator;
     std::vector<std::wstring> m_history;
-    std::map<std::wstring, std::wstring> m_variables;
-    //QueryResult res;
+    //std::map<std::wstring, std::wstring> m_variables;
+    std::map<std::wstring, vData> m_variables;
 
     using ShellHandler = std::function<void(const ShellCommand&)>;
     std::map<std::wstring, ShellHandler> m_commandHandlers;
@@ -51,67 +80,71 @@ public:
 
     bool shouldExit() const override { return !m_running; }
     void stop() { m_running = false; }
-
     std::wstring vValueToString(const vValue& val);
-   // void logQueryResult(const QueryResult& res);
 
     void executeShellCommand(const std::wstring& line);
+    
+    void initializeCommandsHandlers();
+    void initializeFunctionsHandlers();
 
-    void initializeHandlers();
-
+    std::vector<std::wstring> splitArguments(const std::wstring& s);
     std::wstring processArgument(std::wstring arg);
 
- 
-    
-   //void run();
 
-   void execute(const std::wstring& line);
+    void execute(const std::wstring& line);
+    void handleInput(const std::wstring& line, std::wstring& accumulator);
+    std::wstring normalizeVarName(std::wstring name);
+    vDataValue getVarValue(std::wstring expression);
+    void displayVariables();
+    void displaySingleVariable(const std::wstring& varName);
+    vData resolveExpression(std::wstring input);
+    vData parseLiteral(const std::wstring& input, size_t& pos);
 
-   void handleInput(const std::wstring& line, std::wstring& accumulator);
-    
-   void addToHistory(const std::wstring& query);
-
-
-   std::wstring substituteVariables(std::wstring query, const std::map<std::wstring, std::wstring>& vars);
-
-   void processQuery(const std::wstring& query);
+    void addToHistory(const std::wstring& query);
+   
+   std::wstring substituteVariables(std::wstring query, const std::map<std::wstring, vData>& vars);
 
    void executeScript(const std::wstring& filePath);
-  
+     
 
-   
-
+   std::wstring formatPrintR(const vDataValue& data, int indent);
+   std::wstring vDataToPrintable(const vDataValue& data);
    void showHelp();
-   
-   std::wstring normalizeVarName(std::wstring name);
-   void assignFromQuery(const std::wstring& varName, std::wstring subQuery);
-   void assignFromLastResult(const std::wstring& varName, const std::wstring& colName);
+  
+private:
+    std::wstring stripQuotes(std::wstring s);
+    vDataValue parseLiteralToValue(std::wstring str);
 
-   void displayVariables();
-   void displaySingleVariable(const std::wstring& varName);
+    //command handlers
+    void handleSetCommand(const ShellCommand& sc);
+    void handleEchoCommand(const ShellCommand& sc);
+    void handleImportCommand(const ShellCommand& sc);
+    void handleUnsetCommand(const ShellCommand& sc);
+    void handleUnsetAllCommand(const ShellCommand& sc);
+    void handleClearCommand(const ShellCommand& sc);
+    void handleHistoryCommand(const ShellCommand& sc);
+    void handleRunCommand(const ShellCommand& sc);
+    void handlePauseCommand(const ShellCommand& sc);
+    void handleForeachCommand(const ShellCommand& sc);
+    void handleIfCommand(const ShellCommand& sc);
+    void handleSysCommand(const ShellCommand& sc);
+    void handleQuitCommand(const ShellCommand& sc);
 
-   void handleSetCommand(const ShellCommand& sc);
-   void handleRequeryCommand(const ShellCommand& sc);
-   void handleEchoCommand(const ShellCommand& sc);
-   void handleImportCommand(const ShellCommand& sc);
-   void handleSaveCommand(const ShellCommand& sc);
-   void handleInfoCommand(const ShellCommand& sc);
-   void handleUnsetCommand(const ShellCommand& sc);
-   void handleClearCommand(const ShellCommand& sc);
-   void handleHistoryCommand(const ShellCommand& sc);
-   void handleRunCommand(const ShellCommand& sc);
-   void handlePauseCommand(const ShellCommand& sc);
-   void handleLoadCommand(const ShellCommand& sc);
-   void handleCsvCommand(const ShellCommand& sc);
-   void handleForeachCommand(const ShellCommand& sc);
-   void handleDescribeCommand(const ShellCommand& sc);
-   void handleIfCommand(const ShellCommand& sc);
-   void handleSysCommand(const ShellCommand& sc);
-   void handleQuitCommand(const ShellCommand& sc);
+    void handleEvalCommand(const ShellCommand& sc);
+    void handlePrintRCommand(const ShellCommand& sc);
 
-   void handleEvalCommand(const ShellCommand& sc);
-   std::wstring resolveExpression(std::wstring input);
+    // Function Handlers
+    std::wstring fn_SUM(const std::vector<std::wstring>& args);
+    std::wstring fn_FACT(const std::vector<std::wstring>& args);
+    std::wstring fn_CONCAT(const std::vector<std::wstring>& args);
+    std::wstring fn_UPPER(const std::vector<std::wstring>& args);
+    std::wstring fn_LEN(const std::vector<std::wstring>& args);
 
-   
+    std::wstring fn_GET_VAR_VAL(const std::vector<std::wstring>& args);
+    std::wstring fn_SET_VAR_VAL(const std::vector<std::wstring>& args);
+
+    std::wstring fn_PUSH(const std::vector<std::wstring>& args);
+    std::wstring fn_POP(const std::vector<std::wstring>& args);
+
 };
 #endif

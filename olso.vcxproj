@@ -19,7 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\CommandsHandlers.cpp" />
     <ClCompile Include="src\ConsoleManager.cpp" />
+    <ClCompile Include="src\FunctionsHandlers.cpp" />
     <ClCompile Include="src\stringUtils.cpp" />
     <ClCompile Include="src\vApp.cpp" />
     <ClCompile Include="src\vEngine.cpp" />
