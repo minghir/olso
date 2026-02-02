@@ -14,8 +14,6 @@ public:
 
     bool initConsole() override {
         
-
-        
         vShellEngine shEngine;
         vShell shell(shEngine);
         shell.run(); // Această metodă blochează până la 'exit'
@@ -26,11 +24,10 @@ public:
 
 
 int main(int argc, char* argv[]) {
-    // Obținem HINSTANCE pentru vApp (main nu îl primește ca argument)
-    HINSTANCE hInstance = GetModuleHandle(NULL);
+   // HINSTANCE hInstance = GetModuleHandle(NULL);
 
     // Inițializăm aplicația în modul Consola
-    myApp app(hInstance);
+    myApp app(NULL);
 
     // ConsoleManager::initialize() va detecta că Subsystem e deja Console
     app.startConsole();

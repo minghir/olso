@@ -51,13 +51,13 @@ int vApp::run(int nCmdShow) {
     }
     */
     if (m_runMode == RunMode::CONSOLE) {
-        LOG_INFO(L"[vApp::run] Rulează în modul consolă...");
+        LOG_INFO(L"[vApp::run] A rulat în modul consolă...");
        
         return 0;
     }
 
     else if (m_runMode == RunMode::SERVICE) {
-        LOG_INFO(L"[vApp::run] Rulează în modul service...");
+        LOG_INFO(L"[vApp::run] A rulat în modul service...");
         return 0;
     }
 
@@ -199,7 +199,7 @@ void vApp::shutdown() {
 	ConsoleManager::getInstance().log(L"[vApp::shutdown] Oprirea aplicației a fost finalizată.");
 	// Dezalocarea consolei, dacă este cazul (o singură dată, la final).
 	ConsoleManager::getInstance().shutdown();
-    PostQuitMessage(0);
+    //PostQuitMessage(0);
 }
 /*
 // --- Metode Get Window ---
