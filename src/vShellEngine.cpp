@@ -107,13 +107,14 @@ vShellEngine::vShellEngine() : m_running(true) {
     initializeCommandsHandlers();
     initializeFunctionsHandlers();
 }
-
+/*
 void vShellEngine::executeShellCommand(const std::wstring& line) {
     ShellCommand sc = vShellEngineCommandParser::parse(line);
     if (!sc.isValid) return;
 
     // REZOLVARE DINAMICĂ: Transformăm FACT(3) în 6 înainte de a ajunge la Handler
     for (auto& arg : sc.args) {
+        LOG_WARNING(L"{" + arg + L"}");
         arg = processArgument(arg);
     }
 
@@ -125,6 +126,69 @@ void vShellEngine::executeShellCommand(const std::wstring& line) {
         LOG_ERROR(L"Unknown command: " + sc.name);
     }
     }
+    */
+
+void vShellEngine::executeShellCommand(const std::wstring& line) {
+    ShellCommand sc = vShellEngineCommandParser::parse(line);
+    if (!sc.isValid) return;
+
+    // Dispecer de procesare a argumentelor
+    if (sc.name == L"/s" || sc.name == L"/set") {
+        sc = processSetArgs(sc);
+    }
+    else if (sc.name == L"/eval") {
+        // Aici poți adăuga processEvalArgs(sc) pe viitor
+        for (auto& arg : sc.args) arg = processArgument(arg);
+    }
+    else {
+        // Ramura default: procesăm totul normal (comenzi simple ca /echo)
+        for (auto& arg : sc.args) {
+            arg = processArgument(arg);
+        }
+    }
+
+    // Execuția propriu-zisă
+    auto it = m_commandHandlers.find(sc.name);
+    if (it != m_commandHandlers.end()) {
+        it->second(sc);
+    }
+    else {
+        LOG_ERROR(L"Unknown command: " + sc.name);
+    }
+}
+
+
+ShellCommand vShellEngine::processSetArgs(ShellCommand sc) {
+    /*
+    bool foundEquals = false;
+
+    for (auto& arg : sc.args) {
+        if (foundEquals) {
+            // Suntem după egal: aici procesăm tot (variabile, funcții)
+            arg = processArgument(arg);
+        }
+        else {
+            size_t eqPos = arg.find(L'=');
+            if (eqPos != std::wstring::npos) {
+                // Am găsit argumentul care conține '=' (ex: "$a=10" sau "=")
+                std::wstring left = arg.substr(0, eqPos + 1); // "$a="
+                std::wstring right = arg.substr(eqPos + 1);   // "10"
+
+                if (!right.empty()) {
+                    right = processArgument(right);
+                }
+                arg = left + right;
+                foundEquals = true;
+            }
+            else {
+                // Suntem înainte de egal (numele variabilei): NU procesăm nimic
+                // Rămâne crud, ex: $a[1]
+            }
+        }
+    }
+    */
+    return sc;
+}
 
 
 std::vector<std::wstring> vShellEngine::splitArguments(const std::wstring& s) {
@@ -251,6 +315,7 @@ std::wstring dataToString(const vDataValue & data) {
         return std::to_wstring(std::get<long long>(data));
     if (std::holds_alternative<vDataArray>(data))
         return L"[Array]"; // Sau o logică de serializare [1, 2, 3]
+        
     return L"";
 }
 
@@ -492,12 +557,41 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
             if (it != m_variables.end()) return vData{ it->second };
         }
 
+        
+        // 3. Cazul VARIABILĂ PURĂ (Deep Copy)
+        input = normalizeSpaces(input);
+
+        // Verificăm dacă input-ul este strict o variabilă (ex: "$a")
+        // IMPORTANT: Facem asta ÎNAINTE de substituteVariables
+        if (!input.empty() && input.front() == L'$') {
+            // Dacă input-ul este pur o variabilă sau variabilă cu index ($a sau $a[0])
+            // și nu are alte caractere (ca + sau spații)
+            if (input.find_first_of(L" +-*/") == std::wstring::npos) {
+                LOG_DEBUG(L"Încerc Deep Copy pentru: " + input);
+                vDataValue val = resolveVariableToValue(input, m_variables);
+                if (!std::holds_alternative<std::monostate>(val)) {
+                    LOG_WARNING(L"resolveVariableToValue a returnat monostate!");
+                    vData res;
+                    res.value = val; // COPIE PERFECTĂ (păstrează Array, Int, Double)
+                    return res;
+                }
+            }
+        }
+
+        // 4. Doar dacă NU a fost o variabilă pură, mergem pe logica de string-uri
+        std::wstring substituted = substituteVariables(input, m_variables);
+        vData res;
+        res.value = parseLiteralToValue(substituted);
+        return res;
+        
+        /*
         // 3. Cazul STRING simplu sau VARIABLE SUBSTITUTION
         // Dacă nu e array sau sub-comanda, este un string care poate conține variabile
         std::wstring substituted = substituteVariables(input, m_variables);
         vData res;
         res.value = parseLiteralToValue(substituted);
         return res;
+        */
     }
 
    
@@ -702,4 +796,46 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
         }
 
         return result;
+    }
+
+
+    vDataValue vShellEngine::resolveVariableToValue(std::wstring input, const std::map<std::wstring, vData>& vars) {
+        if (input.empty() || input[0] != L'$') return std::monostate{};
+
+        size_t i = 0;
+        std::wstring varName = L"$";
+        i++; // sărim de $
+        while (i < input.length() && (std::iswalnum(input[i]) || input[i] == L'_')) {
+            varName += input[i++];
+        }
+
+        auto it = vars.find(varName);
+        if (it == vars.end()) return std::monostate{};
+
+        vDataValue currentVal = it->second.value;
+
+        // Logica de indexare (mutată aici din substituteVariables)
+        while (i < input.length() && input[i] == L'[') {
+            size_t closeBracket = input.find(L']', i);
+            if (closeBracket == std::wstring::npos) break;
+
+            std::wstring indexStr = input.substr(i + 1, closeBracket - i - 1);
+            // Pentru index folosim în continuare versiunea text (căci indicii sunt mereu numere)
+            std::wstring resolvedIdx = substituteVariables(indexStr, vars);
+            try {
+                int idx = std::stoi(resolvedIdx);
+                if (std::holds_alternative<vDataArray>(currentVal)) {
+                    const auto& arr = std::get<vDataArray>(currentVal);
+                    if (idx >= 0 && (size_t)idx < arr.size()) {
+                        currentVal = arr[idx].value;
+                    }
+                    else return std::monostate{};
+                }
+                else return std::monostate{};
+            }
+            catch (...) { return std::monostate{}; }
+
+            i = closeBracket + 1;
+        }
+        return currentVal;
     }

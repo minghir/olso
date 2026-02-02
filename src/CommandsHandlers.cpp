@@ -647,9 +647,17 @@ void vShellEngine::handleSetCommand(const ShellCommand& sc) {
     if (eqPos == std::wstring::npos) { displaySingleVariable(normalizeVarName(fullLine)); return; }
 
     std::wstring rawName = normalizeSpaces(fullLine.substr(0, eqPos));
+    // Dacă numele începe cu $, îl curățăm manual ca să obținem cheia din map
+    if (!rawName.empty() && rawName[0] == L'$') {
+        // Verificăm dacă NU este o indexare (nu are '[')
+        if (rawName.find(L'[') == std::wstring::npos) {
+            rawName = rawName.substr(1); // Scoatem $ și rămâne doar "a"
+        }
+    }
+
     std::wstring rawValue = normalizeSpaces(fullLine.substr(eqPos + 1));
 
-    std::wcout << L"[DEBUG] rawValue trimis la resolve: |" << rawValue << L"|" << std::endl;
+   
 
     // Folosim resolveExpression - e inima sistemului tău
     vData finalValue = resolveExpression(rawValue);

@@ -115,6 +115,12 @@ private:
     std::wstring stripQuotes(std::wstring s);
     vDataValue parseLiteralToValue(std::wstring str);
 
+
+    ShellCommand processSetArgs(ShellCommand sc);
+
+    vDataValue resolveVariableToValue(std::wstring input, const std::map<std::wstring, vData>& vars);
+
+
     //command handlers
     void handleSetCommand(const ShellCommand& sc);
     void handleUnsetCommand(const ShellCommand& sc);
