@@ -18,6 +18,7 @@ void vShellEngine::initializeFunctionsHandlers() {
 
     m_functionHandlers[L"SUM"] = [this](const auto& args) { return fn_SUM(args); };
     m_functionHandlers[L"FACT"] = [this](const auto& args) { return fn_FACT(args); };
+
     m_functionHandlers[L"CONCAT"] = [this](const auto& args) { return fn_CONCAT(args); };
     m_functionHandlers[L"UPPER"] = [this](const auto& args) { return fn_UPPER(args); };
     m_functionHandlers[L"LEN"] = [this](const auto& args) { return fn_LEN(args); };
