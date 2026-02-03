@@ -850,7 +850,11 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
                 if (std::holds_alternative<vDataArray>(currentVal)) {
                     vDataArray& arr = std::get<vDataArray>(currentVal);
                     if (idx >= 0 && (size_t)idx < arr.size()) {
-                        currentVal = arr[idx].value;
+                        // 1. Facem o copie a VALORII elementului
+                        vDataValue nextLevel = arr[idx].value;
+                        // 2. Abia acum suprascriem currentVal (vechiul array moare aici, dar nextLevel e safe)
+                        currentVal = nextLevel;
+                        //currentVal = arr[idx].value;
                     }
                     else return std::monostate{};
                 }

@@ -682,7 +682,18 @@ void vShellEngine::handleSetCommand(const ShellCommand& sc) {
                 size_t endP = indexPart.find(L']', p);
                 if (endP == std::wstring::npos) break;
                 std::wstring idxStr = indexPart.substr(p + 1, endP - p - 1);
+
                 indices.push_back(std::stoi(substituteVariables(idxStr, m_variables)));
+                /*
+                vData valueIdx = resolveExpression(idxStr);
+                if (std::holds_alternative<long long>(valueIdx.value)) {
+                    indices.push_back((int)std::get<long long>(valueIdx.value));
+                }
+                else if (std::holds_alternative<std::wstring>(valueIdx.value)) {
+                    // Fallback dacă e string, dar măcar e controlat
+                    indices.push_back(std::stoi(std::get<std::wstring>(valueIdx.value)));
+                }
+                */
                 p = endP + 1;
             }
         }
