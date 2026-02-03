@@ -11,7 +11,7 @@
 void vShellEngine::execute(const std::wstring& line) {
     std::wstring cleanLine = normalizeSpaces(line);
     if (cleanLine.empty() && m_accumulator.empty()) return;
-
+    
     // 1. Verificăm dacă linia curentă cere continuare
     bool continues = false;
     if (!cleanLine.empty() && cleanLine.back() == L'\\') {
