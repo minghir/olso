@@ -59,8 +59,8 @@ void vShellEngine::execute(const std::wstring& line) {
 }
 
 
-
-std::wstring vShellEngine::vValueToString(const vValue& val) {
+std::wstring vShellEngine::vValueToString(const vDataValue& val) {
+//std::wstring vShellEngine::vValueToString(const vValue& val) {
     return std::visit([](auto&& arg) -> std::wstring {
         using T = std::decay_t<decltype(arg)>;
 
@@ -460,7 +460,7 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
     }
 
    
-
+    
     std::wstring vShellEngine::vDataToPrintable(const vDataValue& data) {
         if (std::holds_alternative<std::wstring>(data)) {
             // Dacă e wstring, îl afișăm cu ghilimele ca să știm că e text

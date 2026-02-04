@@ -27,7 +27,7 @@
 struct vData; // Forward declaration
 
 using vDataArray = std::vector<vData>;
-//using vDataValue = std::variant<std::monostate, std::wstring, vDataArray>;
+using vDataMap = std::map<std::wstring,vData>;
 
 using vDataValue = std::variant<
     std::monostate,
@@ -35,18 +35,70 @@ using vDataValue = std::variant<
     long long,
     double,
     bool,
-    vDataArray
+    vDataArray,
+    vDataMap
 >;
 
+// Helper pentru vizitarea variant-ului 
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...)->overloaded<Ts...>;
 
 struct vData {
     vDataValue value;
 
     // Utilitar pentru a verifica dacă este array sau string
     bool isArray() const { return std::holds_alternative<vDataArray>(value); }
+    bool isMap() const { return std::holds_alternative<vDataMap>(value); }
+    bool isString() const { return std::holds_alternative<std::wstring>(value); }
+    bool isNumber() const { return std::holds_alternative<long long>(value) || std::holds_alternative<double>(value); }
+   
+    bool isNull() const { return std::holds_alternative<std::monostate>(value); }
+
+    // Un helper util pentru conversie rapidă la string pentru afișare
+    std::wstring toString() const {
+        return std::visit(overloaded{
+            [](std::monostate) -> std::wstring {
+                return L"null";
+            },
+            [](const std::wstring& s) -> std::wstring {
+                return s;
+            },
+            [](long long l) -> std::wstring {
+                return std::to_wstring(l);
+            },
+            [](double d) -> std::wstring {
+                std::wostringstream oss;
+                oss << d; // Folosim oss pentru o formatare mai naturală decât to_wstring
+                return oss.str();
+            },
+            [](bool b) -> std::wstring {
+                return b ? L"true" : L"false";
+            },
+            [](const vDataArray& arr) -> std::wstring {
+                std::wstring res = L"[";
+                for (size_t i = 0; i < arr.size(); ++i) {
+                    res += arr[i].toString(); // Apel recursiv
+                    if (i < arr.size() - 1) res += L", ";
+                }
+                res += L"]";
+                return res;
+            },
+            [](const vDataMap& m) -> std::wstring {
+                std::wstring res = L"{";
+                size_t i = 0;
+                for (auto const& [key, val] : m) {
+                    res += key + L": " + val.toString(); // Apel recursiv
+                    if (++i < m.size()) res += L", ";
+                }
+                res += L"}";
+                return res;
+            }
+            }, value);
+    }
+
 };
 
-using vValue = std::variant<std::monostate, std::wstring, int, double, long long, bool>;
+//using vValue = std::variant<std::monostate, std::wstring, int, double, long long, bool>;
 
 
 
@@ -80,7 +132,8 @@ public:
 
     bool shouldExit() const override { return !m_running; }
     void stop() { m_running = false; }
-    std::wstring vValueToString(const vValue& val);
+    //std::wstring vValueToString(const vValue& val);
+    std::wstring vValueToString(const vDataValue& val);
 
     void executeShellCommand(const std::wstring& line);
     
@@ -140,6 +193,8 @@ private:
     void handlePrintRCommand(const ShellCommand& sc);
 
     // Function Handlers
+    std::wstring fn_TYPEOF(const std::vector<std::wstring>& args);
+
     std::wstring fn_SUM(const std::vector<std::wstring>& args);
     std::wstring fn_FACT(const std::vector<std::wstring>& args);
     std::wstring fn_CONCAT(const std::vector<std::wstring>& args);

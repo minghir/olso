@@ -9,7 +9,10 @@
 #include "stringUtils.hpp"
 
 
+
 void vShellEngine::initializeFunctionsHandlers() {
+    m_functionHandlers[L"TYPEOF"] = [this](const auto& args) { return fn_TYPEOF(args); };
+
     m_functionHandlers[L"GET_VAR_VAL"] = [this](const auto& args) { return fn_GET_VAR_VAL(args); };
     m_functionHandlers[L"SET_VAR_VAL"] = [this](const auto& args) { return fn_SET_VAR_VAL(args); };
 
@@ -23,6 +26,36 @@ void vShellEngine::initializeFunctionsHandlers() {
     m_functionHandlers[L"UPPER"] = [this](const auto& args) { return fn_UPPER(args); };
     m_functionHandlers[L"LEN"] = [this](const auto& args) { return fn_LEN(args); };
 }
+
+std::wstring vShellEngine::fn_TYPEOF(const std::vector<std::wstring>& args) {
+    if (args.empty()) return L"UNDEFINED";
+
+    std::wstring val = args[0];
+
+    // Dacă valoarea a fost deja substituită (ex: "1"), trebuie să vedem ce este "1"
+    // Încercăm să parsăm valoarea primită ca pe un literal
+    size_t pos = 0;
+    vData data = parseLiteral(val, pos);
+
+    // Dacă parseLiteral eșuează sau returnează string, dar noi vrem să fim siguri
+    // că verificăm și variabilele care n-au fost încă substituite (just in case):
+    if (data.isString()) {
+        std::wstring strVal = std::get<std::wstring>(data.value);
+        if (m_variables.count(strVal)) {
+            data = m_variables[strVal];
+        }
+    }
+
+    if (data.isArray())  return L"ARRAY";
+    if (data.isMap())    return L"MAP";
+    if (std::holds_alternative<long long>(data.value)) return L"INTEGER";
+    if (std::holds_alternative<double>(data.value))    return L"DOUBLE";
+    if (std::holds_alternative<bool>(data.value))      return L"BOOLEAN";
+    if (data.isString()) return L"STRING";
+
+    return L"UNKNOWN";
+}
+
 
 std::wstring vShellEngine::fn_SUM(const std::vector<std::wstring>& args) {
     if (args.empty()) return L"0";
