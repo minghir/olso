@@ -799,6 +799,7 @@ bool vShellEngine::handleSetCommand(const ShellCommand& sc) {
             else { LOG_ERROR(L"Path component is not an array."); return false; }
         }
 
+
         // Modificarea finală
         if (std::holds_alternative<vDataArray>(*current)) {
             vDataArray& arr = std::get<vDataArray>(*current);

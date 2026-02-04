@@ -201,8 +201,8 @@ bool vShellEngine::executeLogicalLine(const std::wstring& line) {
 }
 
 
-
-std::wstring vShellEngine::vValueToString(const vValue& val) {
+std::wstring vShellEngine::vValueToString(const vDataValue& val) {
+//std::wstring vShellEngine::vValueToString(const vValue& val) {
     return std::visit([](auto&& arg) -> std::wstring {
         using T = std::decay_t<decltype(arg)>;
 
@@ -515,7 +515,7 @@ std::wstring vShellEngine::substituteVariables(std::wstring query, const std::ma
     }
 
    
-
+    
     std::wstring vShellEngine::vDataToPrintable(const vDataValue& data) {
         if (std::holds_alternative<std::wstring>(data)) {
             // Dacă e wstring, îl afișăm cu ghilimele ca să știm că e text
@@ -724,53 +724,7 @@ std::wstring vShellEngine::substituteVariables(std::wstring query, const std::ma
 
         return currentVal;
     }
-    /*
-    vDataValue vShellEngine::parseLiteralToValue(std::wstring str) {
-        str = normalizeSpaces(str);
-        if (str.empty()) return std::monostate{};
-
-        // ACUM: Dacă detectăm o variabilă, îi extragem valoarea reală imediat
-        if (str.size() > 1 && str[0] == L'$') {
-            return getVarValue(str);
-        }
-
-        // 1. Dacă este un Array literar: [1, 2, "3"]
-        if (str.front() == L'[' && str.back() == L']') {
-            vDataArray result;
-            std::wstring inner = str.substr(1, str.size() - 2);
-            std::vector<std::wstring> parts = splitArguments(inner); // Refolosim split-ul tău inteligent
-
-            for (const auto& p : parts) {
-                vData element;
-                element.value = parseLiteralToValue(p); // Apel recursiv pentru array-uri imbricate
-                result.push_back(element);
-            }
-            return result;
-        }
-
-        // 2. Dacă este un String literar: "text"
-        if (str.size() >= 2 && str.front() == L'\"' && str.back() == L'\"') {
-            return str.substr(1, str.size() - 2);
-        }
-
-        // 3. Dacă este o variabilă: $X
-        if (str.front() == L'$') {
-            return getVarValue(str);
-        }
-
-        // 4. Încercăm să îl convertim în număr
-        try {
-            if (str.find(L'.') != std::wstring::npos) {
-                return std::stod(str);
-            }
-            return std::stoll(str);
-        }
-        catch (...) {
-            // Dacă totul eșuează, îl tratăm ca pe un string brut (fără ghilimele)
-            return str;
-        }
-    }
-*/
+    
 
     vDataValue vShellEngine::parseLiteralToValue(std::wstring str) {
         str = normalizeSpaces(str);
