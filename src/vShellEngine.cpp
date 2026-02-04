@@ -38,12 +38,26 @@ void vShellEngine::execute(const std::wstring& line) {
 
     // CAZ A: Comandă Shell
     if (fullCommand[0] == L'/') {
-        // Eliminăm ';' de la final dacă există (opțional, pentru consistență)
         if (!fullCommand.empty() && fullCommand.back() == L';') {
             fullCommand.pop_back();
         }
-        executeShellCommand(fullCommand);
+
+        // dacă linia conține && sau ||, o tratăm ca UN SINGUR lanț logic
+        if (fullCommand.find(L"&&") != std::wstring::npos ||
+            fullCommand.find(L"||") != std::wstring::npos) {
+
+            executeLogicalLine(fullCommand);
+        }
+        else {
+            // altfel, putem avea mai multe comenzi pe linie, separate prin '/'
+            auto commands = splitShellCommands(fullCommand);
+            for (auto& cmd : commands) {
+                executeShellCommand(cmd);
+            }
+        }
     }
+
+
     // CAZ B: SQL Query
     else {
         // Pentru SQL, verificăm dacă avem ';' obligatoriu
@@ -56,6 +70,134 @@ void vShellEngine::execute(const std::wstring& line) {
             m_accumulator = fullCommand;
         }
     }
+}
+
+std::vector<std::wstring> vShellEngine::splitShellCommands(const std::wstring& line) {
+    std::vector<std::wstring> cmds;
+    std::wstring current;
+    bool inQuotes = false;
+
+    for (size_t i = 0; i < line.size(); ++i) {
+        wchar_t c = line[i];
+
+        if (c == L'"')
+            inQuotes = !inQuotes;
+
+        if (!inQuotes && c == L'/' && !current.empty()) {
+
+            // eliminăm spațiile de la final
+            size_t j = current.size();
+            while (j > 0 && iswspace(current[j - 1])) {
+                j--;
+            }
+
+            bool isLogical = false;
+
+            if (j >= 2) {
+                std::wstring prev2 = current.substr(j - 2, 2);
+                if (prev2 == L"&&" || prev2 == L"||") {
+                    isLogical = true;
+                }
+            }
+
+            if (!isLogical) {
+                cmds.push_back(normalizeSpaces(current));
+                current.clear();
+            }
+        }
+
+
+
+        current += c;
+    }
+
+    if (!current.empty())
+        cmds.push_back(normalizeSpaces(current));
+
+    return cmds;
+}
+
+
+
+
+bool vShellEngine::executeShellCommand(const std::wstring& line) {
+    ShellCommand sc = vShellEngineCommandParser::parse(line);
+    if (!sc.isValid) return false;
+
+    // Dispecer de procesare a argumentelor
+    if (sc.name == L"/s" || sc.name == L"/set") {
+        sc = processSetArgs(sc);
+    }
+    else if (sc.name == L"/eval") {
+        // Aici poți adăuga processEvalArgs(sc) pe viitor
+        for (auto& arg : sc.args) arg = processArgument(arg);
+    }
+    else {
+        // Ramura default: procesăm totul normal (comenzi simple ca /echo)
+        for (auto& arg : sc.args) {
+            arg = processArgument(arg);
+        }
+    }
+
+    // Execuția propriu-zisă
+    auto it = m_commandHandlers.find(sc.name);
+    if (it != m_commandHandlers.end()) {
+        return it->second(sc);
+    }
+    else {
+        
+        LOG_ERROR(L"Unknown command: " + sc.name);
+        return false;
+    }
+}
+
+std::vector<CommandBlock> vShellEngine::splitByLogicalOperators(const std::wstring& line) {
+    std::vector<CommandBlock> blocks;
+    std::wstring current;
+    bool inQuotes = false;
+
+    for (size_t i = 0; i < line.size(); ++i) {
+        wchar_t c = line[i];
+
+        if (c == L'"')
+            inQuotes = !inQuotes;
+
+        if (!inQuotes && i + 1 < line.size()) {
+            std::wstring two = line.substr(i, 2);
+
+            if (two == L"&&" || two == L"||") {
+                blocks.push_back({ normalizeSpaces(current), two });
+                current.clear();
+                i++; // skip operator
+                continue;
+            }
+        }
+
+        current += c;
+    }
+
+    if (!current.empty())
+        blocks.push_back({ normalizeSpaces(current), L"" });
+
+    return blocks;
+}
+
+bool vShellEngine::executeLogicalLine(const std::wstring& line) {
+    auto blocks = splitByLogicalOperators(line);
+
+    bool last = true;
+
+    for (auto& b : blocks) {
+        if (b.op == L"&&" && !last)
+            continue;
+
+        if (b.op == L"||" && last)
+            continue;
+
+        last = executeShellCommand(b.cmd);
+    }
+
+    return last;
 }
 
 
@@ -128,34 +270,7 @@ void vShellEngine::executeShellCommand(const std::wstring& line) {
     }
     */
 
-void vShellEngine::executeShellCommand(const std::wstring& line) {
-    ShellCommand sc = vShellEngineCommandParser::parse(line);
-    if (!sc.isValid) return;
 
-    // Dispecer de procesare a argumentelor
-    if (sc.name == L"/s" || sc.name == L"/set") {
-        sc = processSetArgs(sc);
-    }
-    else if (sc.name == L"/eval") {
-        // Aici poți adăuga processEvalArgs(sc) pe viitor
-        for (auto& arg : sc.args) arg = processArgument(arg);
-    }
-    else {
-        // Ramura default: procesăm totul normal (comenzi simple ca /echo)
-        for (auto& arg : sc.args) {
-            arg = processArgument(arg);
-        }
-    }
-
-    // Execuția propriu-zisă
-    auto it = m_commandHandlers.find(sc.name);
-    if (it != m_commandHandlers.end()) {
-        it->second(sc);
-    }
-    else {
-        LOG_ERROR(L"Unknown command: " + sc.name);
-    }
-}
 
 
 ShellCommand vShellEngine::processSetArgs(ShellCommand sc) {
@@ -387,67 +502,7 @@ std::wstring vShellEngine::substituteVariables(std::wstring query, const std::ma
 }
 
 
-void vShellEngine::executeScript(const std::wstring& filePath) {
-    std::wifstream file(filePath); // Mai simplu direct în constructor
 
-    if (!file.is_open()) {
-        LOG_ERROR(L"Could not open script file: " + filePath);
-        return;
-    }
-
-    auto& console = ConsoleManager::getInstance();
-    LOG_INFO(L"--- Starting Script: " + filePath + L" ---");
-
-    std::wstring line;
-    std::wstring batchQuery;
-    std::wstring shellAccumulator;
-    int commandCount = 0;
-
-    while (std::getline(file, line)) {
-        // 1. Curățăm spațiile și caracterele invizibile
-        if (line.empty()) continue;
-        line.erase(0, line.find_first_not_of(L" \t\r\n"));
-        size_t last = line.find_last_not_of(L" \t\r\n");
-        if (last != std::wstring::npos) line.erase(last + 1);
-        else { line.clear(); continue; } // Linia era doar whitespace
-
-        // 2. Comentarii
-        if (line.empty() || line.find(L"--") == 0) continue;
-
-        // 3. Logică continuare linie
-        bool hasContinuation = (!line.empty() && line.back() == L'\\');
-        if (hasContinuation) {
-            line.pop_back();
-        }
-
-        // --- FIX PENTRU CRASH ---
-        // Verificăm dacă suntem în mijlocul unei comenzi shell SAU dacă linia nouă începe cu '/'
-        // Folosim !line.empty() înainte de a verifica line[0]
-        bool isShell = !shellAccumulator.empty() || (!line.empty() && line[0] == L'/');
-
-        if (isShell) {
-            shellAccumulator += line + L" ";
-
-            if (!hasContinuation) {
-                commandCount++;
-                executeShellCommand(shellAccumulator);
-                shellAccumulator.clear();
-            }
-            continue;
-        }
-
-        // 5. Gestionare SQL
-        batchQuery += line + L" ";
-        // O comandă SQL se termină dacă are ';' și NU are '\' (continuație) la final
-        if (!hasContinuation && line.find(L';') != std::wstring::npos) {
-            commandCount++;
-            // Aici ar trebui să apelezi processQuery(batchQuery);
-            batchQuery.clear();
-        }
-    }
-
-    LOG_SUCCESS(L"--- Script Finished (" + std::to_wstring(commandCount) + L" commands) ---");
-}
 
     
     
@@ -494,9 +549,10 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
         return L"null";
     }
 
-    void vShellEngine::displayVariables() {
+    bool vShellEngine::displayVariables() {
         if (m_variables.empty()) {
             LOG_INFO(L"No variables defined.");
+            return false;
         }
         else {
             ConsoleManager::getInstance().writeRaw(L"=== Defined Variables ===\n", FOREGROUND_GREEN | FOREGROUND_INTENSITY);
@@ -505,10 +561,12 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
                 std::wstring printableValue = vDataToPrintable(dataObj.value);
                 ConsoleManager::getInstance().writeRaw(name + L" = " + printableValue + L"\n");
             }
+
         }
+        return true;
     }
 
-    void vShellEngine::displaySingleVariable(const std::wstring& varName) {
+    bool vShellEngine::displaySingleVariable(const std::wstring& varName) {
         std::wstring cleanName = normalizeVarName(varName);
 
         auto it = m_variables.find(cleanName);
@@ -524,7 +582,9 @@ void vShellEngine::executeScript(const std::wstring& filePath) {
         }
         else {
             LOG_ERROR(L"Variable " + cleanName + L" is not defined.");
+            return false;
         }
+        return true;
     }
 
 

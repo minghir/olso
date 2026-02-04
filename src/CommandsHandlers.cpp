@@ -24,93 +24,94 @@ void vShellEngine::initializeCommandsHandlers() {
             };
         */
     m_commandHandlers[L"/quit"] = [this](const auto& sc) {
-        handleQuitCommand(sc);
+        return handleQuitCommand(sc);
     };
     m_commandHandlers[L"/exit"] = m_commandHandlers[L"/quit"];
     m_commandHandlers[L"/q"] = m_commandHandlers[L"/quit"];
 
     m_commandHandlers[L"/set"] = [this](const auto& sc) {
-        handleSetCommand(sc);
+        return handleSetCommand(sc);
     };
     m_commandHandlers[L"/s"] = m_commandHandlers[L"/set"];
 
     m_commandHandlers[L"/unset"] = [this](const auto& sc) {
-        handleUnsetCommand(sc);
+        return handleUnsetCommand(sc);
     };
     m_commandHandlers[L"/u"] = m_commandHandlers[L"/unset"];
 
     m_commandHandlers[L"/unsetall"] = [this](const auto& sc) {
-        handleUnsetAllCommand(sc);
+        return handleUnsetAllCommand(sc);
     };
     m_commandHandlers[L"/ua"] = m_commandHandlers[L"/unsetall"];
 
     m_commandHandlers[L"/echo"] = [this](const auto& sc) {//requery
-        handleEchoCommand(sc);
+        return handleEchoCommand(sc);
     };
 
     m_commandHandlers[L"/clear"] = [this](const auto& sc) {
-        handleClearCommand(sc);
+        return handleClearCommand(sc);
     };
 
     m_commandHandlers[L"/history"] = [this](const auto& sc) {
-        handleHistoryCommand(sc);
+        return handleHistoryCommand(sc);
     };
 
     m_commandHandlers[L"/run"] = [this](const auto& sc) {
-        handleRunCommand(sc);
+        return handleRunCommand(sc);
     };
 
     m_commandHandlers[L"/r"] = m_commandHandlers[L"/run"];
 
 
     m_commandHandlers[L"/pause"] = [this](const auto& sc) {
-        handlePauseCommand(sc);
+        return handlePauseCommand(sc);
     };
 
     m_commandHandlers[L"/sys"] = [this](const auto& sc) {
-        handleSysCommand(sc);
+        return handleSysCommand(sc);
     };
 
     m_commandHandlers[L"/foreach"] = [this](const auto& sc) {
-        handleForeachCommand(sc);
+        return handleForeachCommand(sc);
     };
 
     m_commandHandlers[L"/if"] = [this](const auto& sc) {
-        handleIfCommand(sc);
+        return handleIfCommand(sc);
     };
 
     m_commandHandlers[L"/eval"] = [this](const auto& sc) {
-        handleEvalCommand(sc);
+        return handleEvalCommand(sc);
     };
     m_commandHandlers[L"/e"] = m_commandHandlers[L"/eval"];
 
     m_commandHandlers[L"/print_r"] = [this](const auto& sc) {
-        handlePrintRCommand(sc);
+        return handlePrintRCommand(sc);
     };
 
 
-    m_commandHandlers[L"/imp"] = [this](const auto& sc) { handleImportCommand(sc); };
-    m_commandHandlers[L"/import"] = [this](const auto& sc) { handleImportCommand(sc); };
+    m_commandHandlers[L"/imp"] = [this](const auto& sc) {return  handleImportCommand(sc); };
+    m_commandHandlers[L"/import"] = [this](const auto& sc) { return handleImportCommand(sc); };
 
     // Alias-uri
-    m_commandHandlers[L"/h"] = [this](const auto& sc) { showHelp(); };
+    m_commandHandlers[L"/h"] = [this](const auto& sc) { return showHelp(); };
     m_commandHandlers[L"/help"] = m_commandHandlers[L"/h"];
 
-    m_commandHandlers[L"/t"] = [this](const auto& sc) {
+    
+    //m_commandHandlers[L"/t"] = [this](const auto& sc) {
         //this->res = m_provider.getSchemaCatalog();
         //logQueryResult(this->res);
-    };
+    //};
 
-    m_commandHandlers[L"/tables"] = m_commandHandlers[L"/t"];
+    //m_commandHandlers[L"/tables"] = m_commandHandlers[L"/t"];
 
 }
 
 
-void vShellEngine::handleIfCommand(const ShellCommand& sc) {
+bool vShellEngine::handleIfCommand(const ShellCommand& sc) {
     // Avem nevoie de: val1 (0), op (1), val2 (2) și măcar un token de comandă (3)
     if (sc.args.size() < 4) {
         LOG_ERROR(L"Usage: /if <v1> <op> <v2> <then_cmd...> [/else <else_cmd...>]");
-        return;
+        return false;
     }
 
     // 1. Evaluăm condiția
@@ -147,18 +148,19 @@ void vShellEngine::handleIfCommand(const ShellCommand& sc) {
 
     // 3. Reconstruim comanda care a câștigat
     const auto& winnerTokens = conditionMet ? thenTokens : elseTokens;
-    if (winnerTokens.empty()) return;
+    if (winnerTokens.empty()) return true;
 
     std::wstring finalCmd;
     for (const auto& t : winnerTokens) finalCmd += t + L" ";
 
     // 4. Executăm rezultatul
     if (finalCmd[0] == L'/') executeShellCommand(finalCmd);
+    return true;
     //else processQuery(finalCmd);
 }
 
 
-void vShellEngine::showHelp() {
+bool vShellEngine::showHelp() {
     auto& console = ConsoleManager::getInstance();
 
     console.writeRaw(L"");
@@ -209,12 +211,13 @@ void vShellEngine::showHelp() {
     console.writeRaw(L"  SQL> SELECT * FROM aviation.pilots WHERE rank = 'Captain';");
     console.writeRaw(L"  SQL> /csv last C:\\exports\\my_result.csv");
     console.writeRaw(L"");
+    return true;
 }
 
-void vShellEngine::handleEchoCommand(const ShellCommand& sc) {
+bool vShellEngine::handleEchoCommand(const ShellCommand& sc) {
     if (sc.args.empty()) {
         ConsoleManager::getInstance().writeRaw(L"\n");
-        return;
+        return false;
     }
 
     std::wstring finalOutput;
@@ -246,9 +249,10 @@ void vShellEngine::handleEchoCommand(const ShellCommand& sc) {
     // Afișăm rezultatul
     ConsoleManager::getInstance().writeRaw(finalOutput + L"\n",
         FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+	return true;
 }
 
-void vShellEngine::handleImportCommand(const ShellCommand& sc) {
+bool vShellEngine::handleImportCommand(const ShellCommand& sc) {
 
     /*
         if (sc.args.size() >= 2) {
@@ -268,9 +272,10 @@ void vShellEngine::handleImportCommand(const ShellCommand& sc) {
             LOG_ERROR(L"Usage: /imp <type> <path> [target]");
         }
         */
+	return true;
 }
 
-void vShellEngine::handleUnsetCommand(const ShellCommand& sc) {
+bool vShellEngine::handleUnsetCommand(const ShellCommand& sc) {
 
     if (!sc.args.empty()) {
         std::wstring varName = sc.args[0];
@@ -280,22 +285,25 @@ void vShellEngine::handleUnsetCommand(const ShellCommand& sc) {
 
         if (m_variables.erase(varName)) {
             LOG_SUCCESS(L"Variable " + varName + L" has been removed.");
+            return true;
         }
         else {
             LOG_ERROR(L"Variable " + varName + L" not found.");
+            return false;
         }
     }
     else {
         LOG_ERROR(L"Usage: /unset <variable_name>");
+        return false;
     }
 
 }
 
-void vShellEngine::handleUnsetAllCommand(const ShellCommand& sc) {
+bool vShellEngine::handleUnsetAllCommand(const ShellCommand& sc) {
 
     if (m_variables.empty()) {
         LOG_INFO(L"Memory is already clean. No variables defined.");
-        return;
+       
     }
 
     // Centură de siguranță: dacă utilizatorul pune un "-f" (force), nu mai întrebăm
@@ -309,19 +317,20 @@ void vShellEngine::handleUnsetAllCommand(const ShellCommand& sc) {
     size_t count = m_variables.size();
     m_variables.clear();
     LOG_SUCCESS(L"Cleanup complete. Deleted " + std::to_wstring(count) + L" variables.");
+    return true;
 }
 
-void vShellEngine::handleClearCommand(const ShellCommand& sc) {
+bool vShellEngine::handleClearCommand(const ShellCommand& sc) {
 
     ConsoleManager::getInstance().clear();
+    return true;
 }
 
 
-void vShellEngine::handleHistoryCommand(const ShellCommand& sc) {
+bool vShellEngine::handleHistoryCommand(const ShellCommand& sc) {
 
     if (m_history.empty()) {
         LOG_INFO(L"Command history is empty.");
-        return;
     }
 
     auto& console = ConsoleManager::getInstance();
@@ -330,19 +339,79 @@ void vShellEngine::handleHistoryCommand(const ShellCommand& sc) {
         std::wstring entry = std::to_wstring(i + 1) + L": " + m_history[i];
         console.writeRaw(entry);
     }
+    return true;
 }
 
-void vShellEngine::handleRunCommand(const ShellCommand& sc) {
+bool vShellEngine::handleRunCommand(const ShellCommand& sc) {
 
-    if (!sc.args.empty()) {
-        executeScript(sc.args[0]);
-    }
-    else {
+    if (sc.args.empty()) {
         LOG_ERROR(L"Usage: /run <file.sql>");
+        return false;
     }
+    std::wstring filePath = sc.args[0];
+    std::wifstream file(filePath); // Mai simplu direct în constructor
+
+    if (!file.is_open()) {
+        LOG_ERROR(L"Could not open script file: " + filePath);
+        return false;
+    }
+
+    auto& console = ConsoleManager::getInstance();
+    LOG_INFO(L"--- Starting Script: " + filePath + L" ---");
+
+    std::wstring line;
+    std::wstring batchQuery;
+    std::wstring shellAccumulator;
+    int commandCount = 0;
+
+    while (std::getline(file, line)) {
+        // 1. Curățăm spațiile și caracterele invizibile
+        if (line.empty()) continue;
+        line.erase(0, line.find_first_not_of(L" \t\r\n"));
+        size_t last = line.find_last_not_of(L" \t\r\n");
+        if (last != std::wstring::npos) line.erase(last + 1);
+        else { line.clear(); continue; } // Linia era doar whitespace
+
+        // 2. Comentarii
+        if (line.empty() || line.find(L"--") == 0) continue;
+
+        // 3. Logică continuare linie
+        bool hasContinuation = (!line.empty() && line.back() == L'\\');
+        if (hasContinuation) {
+            line.pop_back();
+        }
+
+        // --- FIX PENTRU CRASH ---
+        // Verificăm dacă suntem în mijlocul unei comenzi shell SAU dacă linia nouă începe cu '/'
+        // Folosim !line.empty() înainte de a verifica line[0]
+        bool isShell = !shellAccumulator.empty() || (!line.empty() && line[0] == L'/');
+
+        if (isShell) {
+            shellAccumulator += line + L" ";
+
+            if (!hasContinuation) {
+                commandCount++;
+                executeShellCommand(shellAccumulator);
+                shellAccumulator.clear();
+            }
+            continue;
+        }
+
+        // 5. Gestionare SQL
+        batchQuery += line + L" ";
+        // O comandă SQL se termină dacă are ';' și NU are '\' (continuație) la final
+        if (!hasContinuation && line.find(L';') != std::wstring::npos) {
+            commandCount++;
+            // Aici ar trebui să apelezi processQuery(batchQuery);
+            batchQuery.clear();
+        }
+    }
+
+    LOG_SUCCESS(L"--- Script Finished (" + std::to_wstring(commandCount) + L" commands) ---");
+    return true;
 }
 
-void vShellEngine::handlePauseCommand(const ShellCommand& sc) {
+bool vShellEngine::handlePauseCommand(const ShellCommand& sc) {
 
     std::wstring msg = L"Press Enter to continue...";
     if (!sc.args.empty()) {
@@ -354,13 +423,14 @@ void vShellEngine::handlePauseCommand(const ShellCommand& sc) {
     ConsoleManager::getInstance().writeRaw(msg, FOREGROUND_RED | FOREGROUND_INTENSITY);
     std::wstring dummy;
     std::getline(std::wcin, dummy); // Așteaptă input
+    return true;
 }
 
 
-void vShellEngine::handleSysCommand(const ShellCommand& sc) {
+bool vShellEngine::handleSysCommand(const ShellCommand& sc) {
     if (sc.args.empty()) {
         LOG_ERROR(L"Usage: /sys <system_command>");
-        return;
+        return false;
     }
 
     // 1. Reconstruim comanda și interpolăm variabilele shell-ului
@@ -380,7 +450,7 @@ void vShellEngine::handleSysCommand(const ShellCommand& sc) {
     FILE* pipe = _wpopen(fullCommand.c_str(), L"rt");
     if (!pipe) {
         LOG_ERROR(L"Could not execute system command.");
-        return;
+        return false;
     }
 
     wchar_t buffer[128];
@@ -390,16 +460,22 @@ void vShellEngine::handleSysCommand(const ShellCommand& sc) {
 
     int returnCode = _pclose(pipe);
 
-    if (returnCode == 0) LOG_SUCCESS(L"Command finished.");
-    else LOG_ERROR(L"Command failed with code: " + std::to_wstring(returnCode));
+    if (returnCode == 0) {
+        LOG_SUCCESS(L"Command finished.");
+        return true;
+    }
+    else {
+        LOG_ERROR(L"Command failed with code: " + std::to_wstring(returnCode));
+        return false;
+    }
 
 }
 
 
-void vShellEngine::handleEvalCommand(const ShellCommand& sc) {
+bool vShellEngine::handleEvalCommand(const ShellCommand& sc) {
     if (sc.args.empty()) {
         LOG_ERROR(L"Usage: /eval <expression> (ex: /eval FACT(3) * 2)");
-        return;
+        return false;
     }
 
     // 1. Reconstruim expresia din argumente
@@ -424,15 +500,17 @@ void vShellEngine::handleEvalCommand(const ShellCommand& sc) {
     }
     catch (const std::exception& e) {
         LOG_ERROR(L"Eval Error: " + std::wstring(e.what(), e.what() + strlen(e.what())));
+        return false;
     }
     catch (...) {
         LOG_ERROR(L"Eval Error: A apărut o eroare neașteptată în timpul evaluării.");
+        return true;
     }
 }
 
 
-void vShellEngine::handleQuitCommand(const ShellCommand& sc) {
-    stop();
+bool vShellEngine::handleQuitCommand(const ShellCommand& sc) {
+    return stop();
 }
 
 std::wstring vShellEngine::formatPrintR(const vDataValue& data, int indent) {
@@ -471,10 +549,10 @@ std::wstring vShellEngine::formatPrintR(const vDataValue& data, int indent) {
     return result;
 }
 
-void vShellEngine::handlePrintRCommand(const ShellCommand& sc) {
+bool vShellEngine::handlePrintRCommand(const ShellCommand& sc) {
     if (sc.args.empty()) {
         LOG_ERROR(L"Usage: /print_r <variable_name>");
-        return;
+        return false;
     }
 
     // Luăm numele variabilei (ex: $A sau $A[0])
@@ -491,11 +569,13 @@ void vShellEngine::handlePrintRCommand(const ShellCommand& sc) {
     }
     else {
         LOG_ERROR(L"Variable " + cleanName + L" not found.");
+        return false;
     }
+    return true;
 }
 
 
-void vShellEngine::handleForeachCommand(const ShellCommand& sc) {
+bool vShellEngine::handleForeachCommand(const ShellCommand& sc) {
     /*
     if (this->res.data.empty()) return;
 
@@ -551,6 +631,7 @@ void vShellEngine::handleForeachCommand(const ShellCommand& sc) {
         }
     }
     */
+    return true;
 }
 
 /*
@@ -635,8 +716,8 @@ void vShellEngine::handleSetCommand(const ShellCommand& sc) {
 }
 */
 
-void vShellEngine::handleSetCommand(const ShellCommand& sc) {
-    if (sc.args.empty()) { displayVariables(); return; }
+bool vShellEngine::handleSetCommand(const ShellCommand& sc) {
+    if (sc.args.empty()) { displayVariables(); return true; }
 
     // Reconstruim linia pentru a găsi '=' corect
     std::wstring fullLine;
@@ -644,7 +725,7 @@ void vShellEngine::handleSetCommand(const ShellCommand& sc) {
         fullLine += sc.args[i] + (i < sc.args.size() - 1 ? L" " : L"");
 
     size_t eqPos = fullLine.find(L'=');
-    if (eqPos == std::wstring::npos) { displaySingleVariable(normalizeVarName(fullLine)); return; }
+    if (eqPos == std::wstring::npos) { return displaySingleVariable(normalizeVarName(fullLine)); }
 
     std::wstring rawName = normalizeSpaces(fullLine.substr(0, eqPos));
     // Dacă numele începe cu $, îl curățăm manual ca să obținem cheia din map
@@ -671,7 +752,7 @@ void vShellEngine::handleSetCommand(const ShellCommand& sc) {
         auto it = m_variables.find(baseVarName);
         if (it == m_variables.end()) {
             LOG_ERROR(L"Variable " + baseVarName + L" not found.");
-            return;
+            return false;
         }
 
         // Extragere indici cu protecție
@@ -699,10 +780,10 @@ void vShellEngine::handleSetCommand(const ShellCommand& sc) {
         }
         catch (...) {
             LOG_ERROR(L"Invalid index format in " + rawName);
-            return;
+            return false;
         }
 
-        if (indices.empty()) return;
+        if (indices.empty()) return false;
 
         // Navigare în adâncime
         vDataValue* current = &(it->second.value);
@@ -713,9 +794,9 @@ void vShellEngine::handleSetCommand(const ShellCommand& sc) {
                 if (idx >= 0 && (size_t)idx < arr.size()) {
                     current = &(arr[idx].value);
                 }
-                else { LOG_ERROR(L"Index out of bounds."); return; }
+                else { LOG_ERROR(L"Index out of bounds."); return false; }
             }
-            else { LOG_ERROR(L"Path component is not an array."); return; }
+            else { LOG_ERROR(L"Path component is not an array."); return false; }
         }
 
         // Modificarea finală
@@ -726,13 +807,21 @@ void vShellEngine::handleSetCommand(const ShellCommand& sc) {
                 arr[finalIdx] = finalValue;
                 LOG_SUCCESS(L"Updated: " + rawName);
             }
-            else LOG_ERROR(L"Final index out of bounds.");
+            else {
+                LOG_ERROR(L"Final index out of bounds.");
+                return false;
+            }
         }
-        else LOG_ERROR(L"Target is not an array.");
+        else {
+            LOG_ERROR(L"Target is not an array.");
+            return false;
+        }
     }
     else {
         // --- ATRIBUIRE SIMPLĂ ---
         m_variables[normalizeVarName(rawName)] = finalValue;
         LOG_SUCCESS(L"Set: " + normalizeVarName(rawName));
+        return true;
     }
+    return true;
 }

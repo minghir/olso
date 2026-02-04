@@ -58,7 +58,7 @@
             std::wstring line;
             if (!std::getline(std::wcin, line)) break;
             //line = normalizeSpaces(line);
-            LOG_INFO(L"vShell::run("+line+L")");
+            //LOG_INFO(L"vShell::run("+line+L")");
             m_engine.execute(line);
         }
     }
