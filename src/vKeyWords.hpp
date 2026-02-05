@@ -18,7 +18,7 @@ private:
     static inline const std::unordered_set<std::wstring> SHELL_COMMANDS = {
         L"/IMP", L"/CSV", L"/SAVE", L"/LOAD", L"/INFO", L"/D",
         L"/DESCRIBE", L"/T", L"/TABLES", L"/CLEAR", L"/HELP", L"/H", L"/SET", L"/S",
-        L"/ECHO"
+        L"/ECHO", L"/EVAL", L"/E"
     };
 
     static inline const std::unordered_set<std::wstring> DATA_TYPES = {

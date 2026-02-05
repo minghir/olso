@@ -202,46 +202,32 @@ bool vShellEngine::executeLogicalLine(const std::wstring& line) {
 
 
 std::wstring vShellEngine::vValueToString(const vDataValue& val) {
-//std::wstring vShellEngine::vValueToString(const vValue& val) {
     return std::visit([](auto&& arg) -> std::wstring {
         using T = std::decay_t<decltype(arg)>;
 
-        // 1. Gestionare NULL (monostate)
-        // Returnăm un string gol sau "NULL" pentru a nu strica query-urile viitoare
-        if constexpr (std::is_same_v<T, std::monostate>) {
-            return L"";
-        }
-        // 2. String-uri (wstring)
-        else if constexpr (std::is_same_v<T, std::wstring>) {
-            return arg;
-        }
-        // 3. Numere întregi (int, long long, etc.)
-        else if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>) {
-            return std::to_wstring(arg);
-        }
-        // 4. Numere cu virgulă (double, float)
+        if constexpr (std::is_same_v<T, std::monostate>) return L"";
+        else if constexpr (std::is_same_v<T, std::wstring>) return arg;
+        else if constexpr (std::is_integral_v<T> && !std::is_same_v<T, bool>) return std::to_wstring(arg);
         else if constexpr (std::is_floating_point_v<T>) {
+            // Logica ta cu setprecision e excelentă aici
             std::wstringstream ss;
-            // setprecision(2) e bun pentru afișaj, dar dacă vrei precizie totală 
-            // poți scoate std::fixed
             ss << std::fixed << std::setprecision(2) << arg;
             std::wstring s = ss.str();
-
-            // Eliminăm zerourile inutile de la final (opțional)
             if (s.find(L'.') != std::wstring::npos) {
                 s.erase(s.find_last_not_of(L'0') + 1, std::wstring::npos);
                 if (s.back() == L'.') s.pop_back();
             }
             return s;
         }
-        // 5. Boolean
-        else if constexpr (std::is_same_v<T, bool>) {
-            return arg ? L"1" : L"0"; // Returnăm 1/0 pentru compatibilitate SQL mai bună
-        }
-        // 6. Fallback
-        else {
-            return L"";
-        }
+        else if constexpr (std::is_same_v<T, bool>) return arg ? L"true" : L"false";
+
+        // ADAUGĂ ASTA pentru Array-uri (important pentru depanare)
+        else if constexpr (std::is_same_v<T, vDataArray>) return L"[Array]";
+
+        // ADAUGĂ ASTA pentru Map-uri
+        else if constexpr (std::is_same_v<T, vDataMap>) return L"{Map}";
+
+        else return L"";
         }, val);
 }
 

@@ -27,34 +27,7 @@ void vShellEngine::initializeFunctionsHandlers() {
     m_functionHandlers[L"LEN"] = [this](const auto& args) { return fn_LEN(args); };
 }
 
-std::wstring vShellEngine::fn_TYPEOF(const std::vector<std::wstring>& args) {
-    if (args.empty()) return L"UNDEFINED";
 
-    std::wstring val = args[0];
-
-    // Dacă valoarea a fost deja substituită (ex: "1"), trebuie să vedem ce este "1"
-    // Încercăm să parsăm valoarea primită ca pe un literal
-    size_t pos = 0;
-    vData data = parseLiteral(val, pos);
-
-    // Dacă parseLiteral eșuează sau returnează string, dar noi vrem să fim siguri
-    // că verificăm și variabilele care n-au fost încă substituite (just in case):
-    if (data.isString()) {
-        std::wstring strVal = std::get<std::wstring>(data.value);
-        if (m_variables.count(strVal)) {
-            data = m_variables[strVal];
-        }
-    }
-
-    if (data.isArray())  return L"ARRAY";
-    if (data.isMap())    return L"MAP";
-    if (std::holds_alternative<long long>(data.value)) return L"INTEGER";
-    if (std::holds_alternative<double>(data.value))    return L"DOUBLE";
-    if (std::holds_alternative<bool>(data.value))      return L"BOOLEAN";
-    if (data.isString()) return L"STRING";
-
-    return L"UNKNOWN";
-}
 
 
 std::wstring vShellEngine::fn_SUM(const std::vector<std::wstring>& args) {
@@ -123,6 +96,33 @@ std::wstring vShellEngine::fn_CONCAT(const std::vector<std::wstring>& args) {
     return res;
 }
 
+std::wstring vShellEngine::fn_TYPEOF(const std::vector<std::wstring>& args) {
+    if (args.empty()) return L"undefined";
+
+    std::wstring arg = args[0];
+    vDataValue val;
+
+    // Determinăm valoarea: este variabilă sau literal?
+    if (!arg.empty() && arg[0] == L'$') {
+        val = getVarValue(arg);
+    }
+    else {
+        val = parseLiteralToValue(arg);
+    }
+
+    // Vizităm variantul pentru a returna numele tipului
+    return std::visit([](auto&& v) -> std::wstring {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, std::monostate>) return L"null";
+        else if constexpr (std::is_same_v<T, std::wstring>) return L"string";
+        else if constexpr (std::is_same_v<T, long long>) return L"int";
+        else if constexpr (std::is_same_v<T, double>) return L"float";
+        else if constexpr (std::is_same_v<T, bool>) return L"bool";
+        else if constexpr (std::is_same_v<T, vDataArray>) return L"array";
+        else if constexpr (std::is_same_v<T, vDataMap>) return L"map";
+        else return L"unknown";
+        }, val);
+}
 
 std::wstring vShellEngine::fn_LEN(const std::vector<std::wstring>& args) {
     if (args.empty()) return L"0";

@@ -34,6 +34,7 @@ struct CommandBlock {
 struct vData; // Forward declaration
 
 using vDataArray = std::vector<vData>;
+using vDataMap = std::map<std::wstring,vData>;
 //using vDataValue = std::variant<std::monostate, std::wstring, vDataArray>;
 
 using vDataValue = std::variant<
@@ -42,7 +43,8 @@ using vDataValue = std::variant<
     long long,
     double,
     bool,
-    vDataArray
+    vDataArray,
+    vDataMap
 >;
 
 
@@ -51,6 +53,12 @@ struct vData {
 
     // Utilitar pentru a verifica dacă este array sau string
     bool isArray() const { return std::holds_alternative<vDataArray>(value); }
+    bool isMap() const { return std::holds_alternative<vDataMap>(value); }
+    bool isString() const { return std::holds_alternative<std::wstring>(value); }
+    bool isInt() const { return std::holds_alternative<long long>(value); }
+    bool isFloat() const { return std::holds_alternative<double>(value); }
+    bool isBool() const { return std::holds_alternative<bool>(value); }
+    bool IsNull() const { return std::holds_alternative<std::monostate>(value); }
 };
 
 using vValue = std::variant<std::monostate, std::wstring, int, double, long long, bool>;
@@ -97,7 +105,8 @@ public:
     void initializeCommandsHandlers();
     void initializeFunctionsHandlers();
 
-    std::wstring vValueToString(const vValue& val);
+    
+    std::wstring vValueToString(const vDataValue& val);
 
     std::vector<std::wstring> splitArguments(const std::wstring& s);
     std::wstring processArgument(std::wstring arg);
@@ -167,6 +176,9 @@ private:
 
     std::wstring fn_PUSH(const std::vector<std::wstring>& args);
     std::wstring fn_POP(const std::vector<std::wstring>& args);
+
+    std::wstring fn_TYPEOF(const std::vector<std::wstring>& args);
+
 
 };
 #endif
