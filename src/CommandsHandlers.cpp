@@ -477,17 +477,36 @@ bool vShellEngine::handleEvalCommand(const ShellCommand& sc) {
         LOG_ERROR(L"Usage: /eval <expression> (ex: /eval FACT(3) * 2)");
         return false;
     }
-
+   
     // 1. Reconstruim expresia din argumente
     std::wstring wideExpr;
     for (size_t i = 0; i < sc.args.size(); ++i) {
         wideExpr += sc.args[i] + (i < sc.args.size() - 1 ? L" " : L"");
     }
-
+   
     try {
         // 2. Procesăm argumentul: rezolvăm Funcții (FACT) -> Variabile ($A) -> Matematică
         // Folosim processArgument deoarece acesta face deja substitutia si calculele matematice
-        std::wstring processedResult = processArgument(wideExpr);
+        //std::wstring processedResult = processArgument(wideExpr);
+        //if (!isQuoted && arg.find_first_of(L"+-*/^") != std::wstring::npos) {
+    //    try {
+    //        std::string mathExpr(arg.begin(), arg.end());
+    //        return std::to_wstring(evaluate_formula_fp(mathExpr));
+    //    }
+    //    catch (...) { return arg; }
+    //}
+        std::wstring processedResult;
+        for (auto& arg : sc.args) {
+			LOG_INFO(L"ADUN: " + arg);
+            processedResult += substituteVariables(arg, m_variables);
+        }
+        //processedResult = std::to_wstring(evaluate_formula_fp(processedResult));
+        std::string tmp = wstr_to_str(processedResult);
+        double value = evaluate_formula_fp(tmp);
+        processedResult = std::to_wstring(value);
+
+
+
 
         // 3. Afișăm rezultatul
         ConsoleManager::getInstance().writeRaw(processedResult + L"\n", FOREGROUND_GREEN | FOREGROUND_INTENSITY);

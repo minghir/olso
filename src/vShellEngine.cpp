@@ -124,6 +124,7 @@ bool vShellEngine::executeShellCommand(const std::wstring& line) {
     ShellCommand sc = vShellEngineCommandParser::parse(line);
     if (!sc.isValid) return false;
 
+    /*
     // Dispecer de procesare a argumentelor
     if (sc.name == L"/s" || sc.name == L"/set") {
         sc = processSetArgs(sc);
@@ -137,6 +138,11 @@ bool vShellEngine::executeShellCommand(const std::wstring& line) {
         for (auto& arg : sc.args) {
             arg = processArgument(arg);
         }
+    }
+    */
+
+    for (auto& arg : sc.args) {
+        arg = processArgument(arg);
     }
 
     // Execuția propriu-zisă
@@ -367,15 +373,15 @@ std::wstring vShellEngine::processArgument(std::wstring arg) {
     // 4. Substituție variabile
     // IMPORTANT: substituteVariables trebuie să știe să nu strice ghilimelele (dar de obicei e ok)
     arg = substituteVariables(arg, m_variables);
-
+    
     // 5. Evaluare matematică - DOAR dacă nu suntem în ghilimele
-    if (!isQuoted && arg.find_first_of(L"+-*/^") != std::wstring::npos) {
-        try {
-            std::string mathExpr(arg.begin(), arg.end());
-            return std::to_wstring(evaluate_formula_fp(mathExpr));
-        }
-        catch (...) { return arg; }
-    }
+    //if (!isQuoted && arg.find_first_of(L"+-*/^") != std::wstring::npos) {
+    //    try {
+    //        std::string mathExpr(arg.begin(), arg.end());
+    //        return std::to_wstring(evaluate_formula_fp(mathExpr));
+    //    }
+    //    catch (...) { return arg; }
+    //}
 
     return arg;
 }

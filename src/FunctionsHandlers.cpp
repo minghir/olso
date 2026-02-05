@@ -31,6 +31,7 @@ void vShellEngine::initializeFunctionsHandlers() {
 
 
 std::wstring vShellEngine::fn_SUM(const std::vector<std::wstring>& args) {
+    LOG_INFO(L"ICIC");
     if (args.empty()) return L"0";
     double total = 0.0;
     for (const auto& arg : args) {
