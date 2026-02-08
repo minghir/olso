@@ -8,6 +8,122 @@
 #include "vKeyWords.hpp"
 #include "ConsoleManager.hpp"
 
+class LiteralNode : public ASTNode {
+    vDataValue value;
+
+public:
+    explicit LiteralNode(vDataValue v) : value(std::move(v)) {}
+
+    vDataValue evaluate(vShellEngine& engine) override {
+        return value; // Returnează valoarea direct
+    }
+};
+
+class VariableNode : public ASTNode {
+    std::wstring varName;
+
+public:
+    explicit VariableNode(std::wstring name) : varName(std::move(name)) {}
+
+    vDataValue evaluate(vShellEngine& engine) override {
+        // Folosim metoda ta existentă pentru a extrage valoarea din map
+        return engine.getVarValue(varName);
+    }
+};
+
+
+class ASTNode {
+public:
+    virtual ~ASTNode() = default;
+    // Contextul este motorul tău de shell, pentru a accesa m_variables
+    virtual vDataValue evaluate(vShellEngine& engine) = 0;
+};
+
+
+class BinaryOpNode : public ASTNode {
+    std::unique_ptr<ASTNode> left;
+    std::unique_ptr<ASTNode> right;
+    std::wstring op; // "+", "-", "*", "/", "==", "&&" etc.
+
+public:
+    BinaryOpNode(std::unique_ptr<ASTNode> l, std::wstring o, std::unique_ptr<ASTNode> r)
+        : left(std::move(l)), op(o), right(std::move(r)) {
+    }
+
+    vDataValue evaluate(vShellEngine& engine) override {
+        // Pasul 1: Evaluăm recursiv operanzii (mergem în jos pe arbore)
+        vDataValue leftVal = left->evaluate(engine);
+        vDataValue rightVal = right->evaluate(engine);
+
+        // Pasul 2: Aplicăm logica în funcție de operator
+        if (op == L"+") return performAddition(leftVal, rightVal);
+        if (op == L"*") return performMultiplication(leftVal, rightVal);
+        if (op == L"==") return (leftVal == rightVal); // Variant suportă deja ==
+
+        return std::monostate{};
+    }
+
+private:
+    // Aici gestionăm tipurile dinamice (Int + Int, Float + Int, String + String)
+    vDataValue performAddition(const vDataValue& l, const vDataValue& r) {
+        // Cazul: Ambele sunt Long Long
+        if (std::holds_alternative<long long>(l) && std::holds_alternative<long long>(r)) {
+            return std::get<long long>(l) + std::get<long long>(r);
+        }
+        // Cazul: Cel puțin unul e Double (promovăm la Double)
+        if (isNumeric(l) && isNumeric(r)) {
+            return asDouble(l) + asDouble(r);
+        }
+        // Cazul: Concatenare de String-uri
+        if (std::holds_alternative<std::wstring>(l) || std::holds_alternative<std::wstring>(r)) {
+            return engine.vValueToString(l) + engine.vValueToString(r);
+        }
+        return std::monostate{};
+    }
+};
+
+
+class vExpressionParser {
+    std::vector<std::wstring> tokens;
+    size_t pos = 0;
+
+public:
+    std::unique_ptr<ASTNode> parse() {
+        return parseExpression(); // Începe cu cel mai mic nivel de precedență (OR/AND)
+    }
+
+private:
+    // Nivel 1: Adunare și Scădere
+    std::unique_ptr<ASTNode> parseAddition() {
+        auto left = parseMultiplication();
+        while (match(L"+") || match(L"-")) {
+            std::wstring op = prev();
+            auto right = parseMultiplication();
+            left = std::make_unique<BinaryOpNode>(std::move(left), op, std::move(right));
+        }
+        return left;
+    }
+
+    // Nivel 2: Înmulțire și Împărțire
+    std::unique_ptr<ASTNode> parseMultiplication() {
+        auto left = parsePrimary();
+        // ... logică similară pentru * și /
+        return left;
+    }
+
+    // Nivel 3: Valori atomice (Cea mai mare precedență)
+    std::unique_ptr<ASTNode> parsePrimary() {
+        if (match(L"(")) {
+            auto node = parseExpression();
+            consume(L")", L"Expect ')' after expression.");
+            return node;
+        }
+        // Dacă e variabilă, returnează VariableNode
+        // Dacă e număr/string, returnează LiteralNode
+    }
+};
+
+
 struct ShellCommand {
     std::wstring name;
     std::vector<std::wstring> args;
@@ -105,6 +221,18 @@ public:
 };
 
 #endif
+
+
+
+// 1. Construim frunzele
+auto left = std::make_unique<VariableNode>(L"$a");
+auto right = std::make_unique<LiteralNode>(10LL); // 10 ca long long
+
+// 2. Construim nodul de operație (Arborele)
+auto root = std::make_unique<BinaryOpNode>(std::move(left), L"+", std::move(right));
+
+// 3. Executăm!
+vDataValue finalResult = root->evaluate(engine);
 
 /*
 
